@@ -33,8 +33,6 @@ jobs:
 
       - name: Build project
         run: npm run build
-        env:
-          VITE_BASE_PATH: /${{ github.event.repository.name }}/
 
       - name: Copy service worker to dist
         run: cp public/sw.js* dist/

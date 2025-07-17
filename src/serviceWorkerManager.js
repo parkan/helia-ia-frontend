@@ -64,13 +64,12 @@ class ServiceWorkerManager {
         // Small delay to ensure cleanup
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        // Register service worker with cache busting and proper base path
-        const basePath = document.querySelector('base')?.getAttribute('href') || 
-                        (import.meta.env.BASE_URL !== '/' ? import.meta.env.BASE_URL : '') || 
-                        '';
-        const swUrl = `${basePath}sw.js?v=${Date.now()}`;
+        // Register service worker with cache busting
+        const swUrl = `./sw.js?v=${Date.now()}`;
+        console.log(`📝 Registering service worker at: ${swUrl}`);
+        
         this.registration = await navigator.serviceWorker.register(swUrl, {
-          scope: basePath || '/',
+          scope: './',
           updateViaCache: 'none', // Always fetch fresh service worker
           type: 'module' // ES module service worker
         });

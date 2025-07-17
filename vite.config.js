@@ -3,11 +3,9 @@ import react from '@vitejs/plugin-react';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import { fileURLToPath, URL } from 'node:url';
 
-export default defineConfig(({ command }) => ({
-  // For GitHub Pages: set VITE_BASE_PATH to your repository name
-  // e.g., VITE_BASE_PATH=/my-repo/ npm run build
-  // eslint-disable-next-line no-undef
-  base: command === 'build' ? (process.env.VITE_BASE_PATH || '/helia-frontend/') : '/',
+export default defineConfig(() => ({
+  // Use relative paths for better deployment flexibility
+  base: '',
   plugins: [
     react(),
     nodePolyfills({
