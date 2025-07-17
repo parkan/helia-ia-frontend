@@ -6,6 +6,26 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import './styles/globals.css';
 
+// Determine the base path for React Router from build environment
+// Can be set via VITE_BASE_PATH environment variable during build
+const getBasename = () => {
+  // Read from environment variable set during build
+  const envBasePath = import.meta.env.VITE_BASE_PATH;
+  
+  if (envBasePath) {
+    // Ensure it starts with / and doesn't end with /
+    const normalized = envBasePath.startsWith('/') ? envBasePath : `/${envBasePath}`;
+    return normalized.endsWith('/') ? normalized.slice(0, -1) : normalized;
+  }
+  
+  // Default to empty for local development
+  return '';
+};
+
+const basename = getBasename();
+console.log('🟢 Environment VITE_BASE_PATH:', import.meta.env.VITE_BASE_PATH);
+console.log('🟢 Using basename:', basename);
+
 // Add global error handlers for better debugging
 window.addEventListener('error', (event) => {
   console.error('🔴 Global error:', event.error);
@@ -58,6 +78,7 @@ class ErrorBoundary extends React.Component {
         </div>
       );
     }
+    // eslint-disable-next-line react/prop-types
     return this.props.children;
   }
 }
@@ -67,7 +88,7 @@ console.log('🟢 All imports successful, mounting React...');
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <BrowserRouter>
+      <BrowserRouter basename={basename}>
         <App />
       </BrowserRouter>
     </ErrorBoundary>

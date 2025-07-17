@@ -32,6 +32,8 @@ jobs:
         run: npm ci
 
       - name: Build project
+        env:
+          VITE_BASE_PATH: /${{ github.event.repository.name }}
         run: npm run build
 
       - name: Copy service worker to dist
