@@ -4,6 +4,8 @@ import { serviceWorkerManager } from '../serviceWorkerManager';
 import { parseXML, extractMetadata } from '../xmlParser';
 
 export default function Home() {
+  console.log('🟢 Home component rendering');
+  
   const navigate = useNavigate();
   const [cid, setCid] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -286,6 +288,8 @@ export default function Home() {
   const navigateToDownload = (baseName) => {
     navigate(`/download/${encodeURIComponent(baseName)}?cid=${encodeURIComponent(cid)}`);
   };
+
+  console.log('🟢 Home component about to return JSX');
 
   return (
     <div className="min-h-screen">
