@@ -4,7 +4,7 @@ import { createHeliaHTTP } from '@helia/http';
 import { unixfs } from '@helia/unixfs';
 import { CID } from 'multiformats/cid';
 import { trustlessGateway } from '@helia/block-brokers';
-import { httpGatewayRouting } from '@helia/routers';
+import { httpGatewayRouting, delegatedHTTPRouting } from '@helia/routers';
 import { createVerifiedFetch } from '@helia/verified-fetch';
 import type { Helia } from '@helia/interface';
 import type { UnixFS } from '@helia/unixfs';
@@ -96,13 +96,13 @@ async function doInitialization(): Promise<{ helia: Helia; fs: UnixFS; verifiedF
       ],
       // Configure routers with custom gateways
       routers: [
+        delegatedHTTPRouting('http://delegated-ipfs.dev'),
         httpGatewayRouting({
           gateways: [
-            'https://ia.dcentnetworks.nl'
-            // Other gateways commented out for now
-            // , 'https://trustless-gateway.link'
-            // , 'https://blocks.ipfs.io'
-            // , 'https://dweb.link'
+            'https://ia.dcentnetworks.nl',
+            'https://trustless-gateway.link',
+            'https://blocks.ipfs.io',
+            'https://dweb.link'
           ]
         })
       ]
