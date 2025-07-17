@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { serviceWorkerManager } from '../../utils/serviceWorkerManager';
-import { parseXML, extractMetadata } from '../../utils/xmlParser';
+import { serviceWorkerManager } from '../serviceWorkerManager';
+import { parseXML, extractMetadata } from '../xmlParser';
 
 export default function Home() {
   const navigate = useNavigate();

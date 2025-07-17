@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import { serviceWorkerManager } from '../../utils/serviceWorkerManager';
-import { processXmlPair } from '../../utils/xmlParser';
+import { serviceWorkerManager } from '../serviceWorkerManager';
+import { processXmlPair } from '../xmlParser';
 
 export default function DownloadId() {
   const { id: baseName } = useParams();
