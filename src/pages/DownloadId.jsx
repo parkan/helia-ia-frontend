@@ -584,12 +584,12 @@ export default function DownloadId() {
           <div className="bg-black py-6 px-8 flex items-center justify-center relative">
             <div className="absolute left-8 flex items-center space-x-6">
               <img 
-                src="/ia.png" 
+                src="./ia.png" 
                 alt="Internet Archive" 
                 className="h-12 object-contain"
               />
               <img 
-                src="/ffdw.png" 
+                src="./ffdw.png" 
                 alt="Freedom of the Press Foundation" 
                 className="h-12 object-contain"
               />

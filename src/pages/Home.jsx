@@ -300,12 +300,12 @@ export default function Home() {
           <div className="bg-black py-6 px-8 flex items-center justify-center relative">
             <div className="absolute left-8 flex items-center space-x-6">
               <img 
-                src="/ia.png" 
+                src="./ia.png" 
                 alt="Internet Archive" 
                 className="h-12 object-contain"
               />
               <img 
-                src="/ffdw.png" 
+                src="./ffdw.png" 
                 alt="Freedom of the Press Foundation" 
                 className="h-12 object-contain"
               />
@@ -469,13 +469,13 @@ export default function Home() {
                                 className="max-w-full max-h-full object-contain rounded"
                                 onError={(e) => {
                                   // Fallback to archive logo if thumbnail fails to load
-                                  e.target.src = "/archive.png";
+                                  e.target.src = "./archive.png";
                                   e.target.alt = "Internet Archive";
                                 }}
                               />
                             ) : (
                               <img 
-                                src="/archive.png" 
+                                src="./archive.png" 
                                 alt="Internet Archive"
                                 className="max-w-full max-h-full object-contain"
                               />
