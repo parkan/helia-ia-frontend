@@ -64,10 +64,13 @@ class ServiceWorkerManager {
         // Small delay to ensure cleanup
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        // Register service worker with cache busting
-        const swUrl = `/sw.js?v=${Date.now()}`;
+        // Register service worker with cache busting and proper base path
+        const basePath = document.querySelector('base')?.getAttribute('href') || 
+                        (import.meta.env.BASE_URL !== '/' ? import.meta.env.BASE_URL : '') || 
+                        '';
+        const swUrl = `${basePath}sw.js?v=${Date.now()}`;
         this.registration = await navigator.serviceWorker.register(swUrl, {
-          scope: '/',
+          scope: basePath || '/',
           updateViaCache: 'none', // Always fetch fresh service worker
           type: 'module' // ES module service worker
         });
@@ -194,7 +197,7 @@ class ServiceWorkerManager {
     // Handle progress updates separately
     if (type === 'PROGRESS_UPDATE') {
       // Find any pending messages that might want this progress update
-      for (const [messageId, pendingMessage] of this.pendingMessages) {
+      for (const [, pendingMessage] of this.pendingMessages) {
         if (pendingMessage.onProgress && typeof pendingMessage.onProgress === 'function') {
           pendingMessage.onProgress(data);
         }
@@ -216,7 +219,7 @@ class ServiceWorkerManager {
       };
       
       // Send to any pending messages that might want this progress update
-      for (const [messageId, pendingMessage] of this.pendingMessages) {
+      for (const [, pendingMessage] of this.pendingMessages) {
         if (pendingMessage.onProgress && typeof pendingMessage.onProgress === 'function') {
           pendingMessage.onProgress(progressData);
         }
