@@ -1,0 +1,38 @@
+{
+    "name": "helia-frontend",
+    "image": "mcr.microsoft.com/devcontainers/javascript-node:24",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "eamodio.gitlens",
+                "ms-vscode.vscode-json",
+                "bradlc.vscode-tailwindcss"
+            ],
+            "settings": {
+                "editor.formatOnSave": true,
+                "editor.defaultFormatter": "esbenp.prettier-vscode"
+            }
+        }
+    },
+    "features": {
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": "24"
+        },
+        "ghcr.io/devcontainers/features/git:1": {}
+    },
+    "forwardPorts": [3000],
+    "portsAttributes": {
+        "3000": {
+            "label": "Frontend Dev Server",
+            "onAutoForward": "openPreview"
+        }
+    },
+    "postCreateCommand": "npm install",
+    "remoteUser": "node",
+    "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached,relabel=private",
+    "workspaceFolder": "/workspace",
+    "containerEnv": {
+        "NODE_ENV": "development"
+    },
+    "containerUser": "node"
+} 

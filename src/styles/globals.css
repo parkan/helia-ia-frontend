@@ -1,0 +1,192 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Archive.org inspired styling */
+/* Using system fonts - Helvetica Neue and fallbacks */
+
+:root {
+  --archive-blue: #2c5aa0;
+  --archive-blue-dark: #1a3a6b;
+  --archive-text: #333333;
+  --archive-text-light: #666666;
+  --archive-bg: #ffffff;
+  --archive-bg-alt: #f8f9fa;
+  --archive-border: #e0e0e0;
+  --archive-green: #28a745;
+  --archive-orange: #fd7e14;
+}
+
+body {
+  font-family: 'Helvetica Neue', Helvetica, Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: var(--archive-text);
+  background-color: var(--archive-bg-alt);
+  line-height: 1.6;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Helvetica Neue', Helvetica, Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 600;
+  color: var(--archive-text);
+}
+
+.archive-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  background: var(--archive-bg);
+  border: 1px solid var(--archive-border);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.archive-button {
+  background: var(--archive-blue);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 3px;
+  transition: background-color 0.2s;
+}
+
+.archive-button:hover {
+  background: var(--archive-blue-dark);
+}
+
+.archive-card {
+  background: var(--archive-bg);
+  border: 1px solid var(--archive-border);
+  border-radius: 4px;
+  transition: box-shadow 0.2s;
+}
+
+.archive-card:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.archive-tag {
+  background: #e8f4f8;
+  color: var(--archive-blue-dark);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.archive-metadata {
+  color: var(--archive-text-light);
+  font-size: 14px;
+}
+
+.archive-link {
+  color: var(--archive-blue);
+  text-decoration: none;
+}
+
+.archive-link:hover {
+  color: var(--archive-blue-dark);
+  text-decoration: underline;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+  font-family: 'Helvetica Neue', Helvetica, Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Custom scrollbar for better UX */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Loading animations */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Custom styles for the app */
+.helia-card {
+  @apply bg-white rounded-lg shadow-lg border border-gray-200 transition-all duration-200 hover:shadow-xl;
+}
+
+.helia-button {
+  @apply bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200;
+}
+
+.helia-input {
+  @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+}
+
+.helia-badge {
+  @apply px-2 py-1 text-xs font-semibold rounded-full;
+}
+
+.helia-badge-success {
+  @apply bg-green-100 text-green-800;
+}
+
+.helia-badge-error {
+  @apply bg-red-100 text-red-800;
+}
+
+.helia-badge-warning {
+  @apply bg-yellow-100 text-yellow-800;
+}
+
+.helia-badge-info {
+  @apply bg-blue-100 text-blue-800;
+}
+
+/* Line clamp utilities */
+.line-clamp-1 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.line-clamp-3 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+} 
