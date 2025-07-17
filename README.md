@@ -55,15 +55,49 @@ The production build will be output to the `dist` directory.
 
 ## Deployment
 
-This is a fully static SPA that can be deployed to any static hosting service:
+This is a fully static SPA that can be deployed to any static hosting service.
 
-- Netlify
-- Vercel
-- GitHub Pages
-- IPFS
-- Any web server that can serve static files
+### GitHub Pages (Automatic)
 
-Just deploy the contents of the `dist` directory after running `npm run build`.
+This repository includes a GitHub Actions workflow that automatically builds and deploys to GitHub Pages on every push to the `main` branch.
+
+**Setup Instructions:**
+1. Go to your repository Settings → Pages
+2. Set Source to "GitHub Actions"
+3. Push to the `main` branch
+4. The site will be available at `https://username.github.io/repository-name/`
+
+The workflow automatically:
+- Builds the project with the correct base path
+- Copies the service worker to the output directory
+- Creates a 404.html for SPA routing support
+- Deploys to GitHub Pages
+
+### Manual Deployment
+
+For other hosting services:
+
+```bash
+# Build for production
+npm run build
+
+# For custom base paths (e.g., subdirectory hosting)
+VITE_BASE_PATH=/my-subdirectory/ npm run build
+```
+
+**Hosting Services:**
+- **Netlify**: Deploy the `dist` directory
+- **Vercel**: Deploy the `dist` directory  
+- **GitHub Pages**: Use the included GitHub Actions workflow
+- **IPFS**: Perfect for hosting on IPFS itself
+- **Any web server**: Serve the `dist` directory contents
+
+**Important for SPA Routing:**
+Most hosting services need configuration to handle client-side routing. The built-in GitHub Actions workflow handles this automatically by creating a 404.html file. For other services:
+
+- **Netlify**: Add `_redirects` file with `/* /index.html 200`
+- **Vercel**: Add `vercel.json` with rewrites configuration
+- **Apache**: Configure `.htaccess` for fallback routing
 
 ## Service Worker
 
@@ -90,7 +124,9 @@ npm run build-sw:watch
 
 ## Environment Variables
 
-No environment variables are required for basic operation. The app runs entirely in the browser.
+- `VITE_BASE_PATH` - Set the base path for deployment (e.g., `/my-repo/` for GitHub Pages)
+
+No other environment variables are required for basic operation. The app runs entirely in the browser.
 
 ## Architecture
 
