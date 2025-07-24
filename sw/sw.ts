@@ -96,13 +96,13 @@ async function doInitialization(): Promise<{ helia: Helia; fs: UnixFS; verifiedF
       ],
       // Configure routers with custom gateways
       routers: [
-        delegatedHTTPRouting('http://delegated-ipfs.dev'),
+        //delegatedHTTPRouting('http://delegated-ipfs.dev'),
         httpGatewayRouting({
           gateways: [
             'https://ia.dcentnetworks.nl',
-            'https://trustless-gateway.link',
-            'https://blocks.ipfs.io',
-            'https://dweb.link'
+            //'https://trustless-gateway.link',
+            //'https://blocks.ipfs.io',
+            //'https://dweb.link'
           ]
         })
       ]
