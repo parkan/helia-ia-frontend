@@ -72,7 +72,7 @@ export default function Home() {
           
           if (thumbnailFile) {
             console.log(`🖼️ Found thumbnail for ${identifier}: ${thumbnailFile.name} (CID: ${thumbnailFile.cid})`);
-            const thumbnailUrl = `/ipfs-sw/${thumbnailFile.cid}?filename=${encodeURIComponent(thumbnailFile.name)}`;
+            const thumbnailUrl = `./ipfs-sw/${thumbnailFile.cid}?filename=${encodeURIComponent(thumbnailFile.name)}`;
             console.log(`🔗 Generated thumbnail URL: ${thumbnailUrl}`);
             setItemThumbnails(prev => {
               const updated = {
@@ -226,7 +226,7 @@ export default function Home() {
           });
           
           // Fetch only the meta.xml file
-          const response = await fetch(`/ipfs-sw/${pair.metaXml.cid}?filename=${pair.metaXml.name}`);
+          const response = await fetch(`ipfs-sw/${pair.metaXml.cid}?filename=${pair.metaXml.name}`);
           const metaXmlContent = await response.text();
           
           // Parse only the metadata (no files info needed for cards)

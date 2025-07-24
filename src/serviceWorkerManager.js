@@ -64,12 +64,15 @@ class ServiceWorkerManager {
         // Small delay to ensure cleanup
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        // Register service worker with cache busting
-        const swUrl = `./sw.js?v=${Date.now()}`;
-        console.log(`📝 Registering service worker at: ${swUrl}`);
+        // For Vite apps: use the base URL configured at build time
+        // This works because Vite replaces import.meta.env.BASE_URL at build time
+        const base = import.meta.env.BASE_URL || '/';
+        const swUrl = `${base}sw.js?v=${Date.now()}`;
+        
+        console.log(`📝 Registering service worker at: ${swUrl} with scope: ${base}`);
         
         this.registration = await navigator.serviceWorker.register(swUrl, {
-          scope: './',
+          scope: base,
           updateViaCache: 'none', // Always fetch fresh service worker
           type: 'module' // ES module service worker
         });
@@ -669,8 +672,8 @@ class ServiceWorkerManager {
       onProgress?.({ step: 'retrieve_files', message: `Fetching XML files for ${baseName}...` });
       
       const [filesXmlContent, metaXmlContent] = await Promise.all([
-        fetch(`/ipfs-sw/${targetPair.filesXml.cid}?filename=${targetPair.filesXml.name}`).then(r => r.text()),
-        fetch(`/ipfs-sw/${targetPair.metaXml.cid}?filename=${targetPair.metaXml.name}`).then(r => r.text())
+        fetch(`ipfs-sw/${targetPair.filesXml.cid}?filename=${targetPair.filesXml.name}`).then(r => r.text()),
+        fetch(`ipfs-sw/${targetPair.metaXml.cid}?filename=${targetPair.metaXml.name}`).then(r => r.text())
       ]);
       
       onProgress?.({ step: 'complete', message: 'XML files retrieved successfully.' });

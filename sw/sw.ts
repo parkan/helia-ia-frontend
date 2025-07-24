@@ -531,17 +531,24 @@ self.addEventListener('message', async (event: MessageEvent) => {
 self.addEventListener('fetch', async (event: FetchEvent) => {
   const url = new URL(event.request.url);
   
-  // Check if this is a request for IPFS content via service worker
-  if (url.pathname.startsWith('/ipfs-sw/')) {
-    console.log(`📥 SW: Intercepting request to ${url.pathname}`);
+  // Simple and robust: check if request is within our scope and contains ipfs-sw/
+  const scope = self.registration.scope;
+  
+  if (url.href.startsWith(scope) && url.pathname.includes('/ipfs-sw/')) {
+    console.log(`📥 SW: Intercepting IPFS request to ${url.pathname}`);
     
     event.respondWith(
       (async () => {
         try {
-          // Extract CID and optional file path from URL
-          const pathParts = url.pathname.split('/');
-          const cid = pathParts[2]; // /ipfs-sw/[cid]
-          const filePath = pathParts.slice(3).join('/'); // /ipfs-sw/[cid]/[optional/file/path]
+          // Extract CID using simple pattern matching
+          const match = url.pathname.match(/\/ipfs-sw\/([^/?]+)(\/.*)?/);
+          if (!match) {
+            console.error('❌ SW: Invalid IPFS URL format:', url.pathname);
+            return new Response('Invalid IPFS URL format', { status: 400 });
+          }
+          
+          const cid = match[1];
+          const filePath = match[2]?.slice(1) || ''; // Remove leading slash if present
           
           // Get filename from path or query parameter
           const filename = filePath || url.searchParams.get('filename');
