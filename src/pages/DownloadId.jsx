@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { serviceWorkerManager } from '../serviceWorkerManager';
 import { processXmlPair } from '../xmlParser';
-import { ipfsUrl } from '../utils/ipfsUrl';
+// No longer need ipfsUrl helper - using relative paths with dynamic base tag
 
 export default function DownloadId() {
   const { id: baseName } = useParams();
@@ -140,11 +140,11 @@ export default function DownloadId() {
         setProgress({ step: 'retrieve_cached_xml', message: 'Loading XML files from cache info...' });
         
         const [filesXmlContent, metaXmlContent] = await Promise.all([
-          fetch(ipfsUrl(`ipfs-sw/${targetPair.filesXml.cid}?filename=${targetPair.filesXml.name}`)).then(r => {
+          fetch(`./ipfs-sw/${targetPair.filesXml.cid}?filename=${targetPair.filesXml.name}`).then(r => {
             console.log(`🔍 Files XML fetch response status: ${r.status}`);
             return r.text();
           }),
-          fetch(ipfsUrl(`ipfs-sw/${targetPair.metaXml.cid}?filename=${targetPair.metaXml.name}`)).then(r => {
+          fetch(`./ipfs-sw/${targetPair.metaXml.cid}?filename=${targetPair.metaXml.name}`).then(r => {
             console.log(`🔍 Meta XML fetch response status: ${r.status}`);
             return r.text();
           })
@@ -197,8 +197,8 @@ export default function DownloadId() {
         console.log(`🚀 Attempting direct XML fetch for ${baseName} in CID: ${cid}`);
         
         // Construct the direct XML file paths
-        const metaXmlUrl = ipfsUrl(`ipfs-sw/${cid}/${baseName}_meta.xml`);
-        const filesXmlUrl = ipfsUrl(`ipfs-sw/${cid}/${baseName}_files.xml`);
+              const metaXmlUrl = `./ipfs-sw/${cid}/${baseName}_meta.xml`;
+      const filesXmlUrl = `./ipfs-sw/${cid}/${baseName}_files.xml`;
         
         console.log(`📥 Fetching XML files directly:`, { metaXmlUrl, filesXmlUrl });
         
@@ -453,7 +453,7 @@ export default function DownloadId() {
                   file.name?.toLowerCase().endsWith('.pdf');
     
     if (isPdf) {
-      const pdfUrl = ipfsUrl(`ipfs-sw/${file.cid}?filename=${encodeURIComponent(file.name)}${file.size ? `&size=${file.size}` : ''}`);
+      const pdfUrl = `./ipfs-sw/${file.cid}?filename=${encodeURIComponent(file.name)}${file.size ? `&size=${file.size}` : ''}`;
       setPdfLoading(true);
       setViewingPdf({ 
         name: file.name, 
@@ -468,7 +468,7 @@ export default function DownloadId() {
                     /\.(jpe?g|png|gif|webp|tiff?)$/i.test(file.name || '');
     
     if (isImage) {
-      const imageUrl = ipfsUrl(`ipfs-sw/${file.cid}?filename=${encodeURIComponent(file.name)}${file.size ? `&size=${file.size}` : ''}`);
+      const imageUrl = `./ipfs-sw/${file.cid}?filename=${encodeURIComponent(file.name)}${file.size ? `&size=${file.size}` : ''}`;
       setImageLoading(true);
       setViewingImage({ 
         name: file.name, 
@@ -483,7 +483,7 @@ export default function DownloadId() {
                         /\.(mp4|avi|mkv|mov|webm|wmv|flv|m4v)$/i.test(file.name || '');
     
     if (isVideoFile) {
-      const videoUrl = ipfsUrl(`ipfs-sw/${file.cid}?filename=${encodeURIComponent(file.name)}${file.size ? `&size=${file.size}` : ''}`);
+      const videoUrl = `./ipfs-sw/${file.cid}?filename=${encodeURIComponent(file.name)}${file.size ? `&size=${file.size}` : ''}`;
       setVideoLoading(true);
       setViewingVideo({ 
         name: file.name, 
@@ -507,7 +507,7 @@ export default function DownloadId() {
       setProgress({ step: 'download', message: `Downloading ${file.name}...` });
 
       // Fetch file content from IPFS
-      const response = await fetch(ipfsUrl(`ipfs-sw/${file.cid}?filename=${encodeURIComponent(file.name)}${file.size ? `&size=${file.size}` : ''}`));
+      const response = await fetch(`./ipfs-sw/${file.cid}?filename=${encodeURIComponent(file.name)}${file.size ? `&size=${file.size}` : ''}`);
       const fileContent = await response.text();
       
       // Determine MIME type based on file extension
@@ -597,16 +597,16 @@ export default function DownloadId() {
           {/* Header Bar */}
           <div className="bg-black py-6 px-8 flex items-center justify-center relative">
             <div className="absolute left-8 flex items-center space-x-6">
-              <img 
-                src="./ia.png" 
-                alt="Internet Archive" 
-                className="h-12 object-contain"
-              />
-              <img 
-                src="./ffdw.png" 
-                alt="Freedom of the Press Foundation" 
-                className="h-12 object-contain"
-              />
+                          <img 
+              src="./ia.png" 
+              alt="Internet Archive" 
+              className="h-12 object-contain"
+            />
+            <img 
+              src="./ffdw.png" 
+              alt="Freedom of the Press Foundation" 
+              className="h-12 object-contain"
+            />
             </div>
             <div className="text-white text-xl font-bold">
               IPFS Media Browser

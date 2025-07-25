@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { serviceWorkerManager } from '../serviceWorkerManager';
 import { parseXML, extractMetadata } from '../xmlParser';
+// No longer need ipfsUrl helper - using relative paths with dynamic base tag
 
 export default function Home() {
   console.log('🟢 Home component rendering');
@@ -226,7 +227,7 @@ export default function Home() {
           });
           
           // Fetch only the meta.xml file
-          const response = await fetch(`ipfs-sw/${pair.metaXml.cid}?filename=${pair.metaXml.name}`);
+          const response = await fetch(`./ipfs-sw/${pair.metaXml.cid}?filename=${pair.metaXml.name}`);
           const metaXmlContent = await response.text();
           
           // Parse only the metadata (no files info needed for cards)
@@ -268,7 +269,7 @@ export default function Home() {
         console.log(`🧪 TEST: Adding test thumbnail for first item: ${processedItems[0].baseName}`);
         setItemThumbnails(prev => ({
           ...prev,
-          [processedItems[0].baseName]: '/archive.png' // Use archive.png as test thumbnail
+                      [processedItems[0].baseName]: './archive.png' // Use archive.png as test thumbnail
         }));
       }
 
@@ -299,16 +300,16 @@ export default function Home() {
           {/* Header Bar */}
           <div className="bg-black py-6 px-8 flex items-center justify-center relative">
             <div className="absolute left-8 flex items-center space-x-6">
-              <img 
-                src="./ia.png" 
-                alt="Internet Archive" 
-                className="h-12 object-contain"
-              />
-              <img 
-                src="./ffdw.png" 
-                alt="Freedom of the Press Foundation" 
-                className="h-12 object-contain"
-              />
+                          <img 
+              src="./ia.png" 
+              alt="Internet Archive" 
+              className="h-12 object-contain"
+            />
+            <img 
+              src="./ffdw.png" 
+              alt="Freedom of the Press Foundation" 
+              className="h-12 object-contain"
+            />
             </div>
             <div className="text-white text-xl font-bold">
               IPFS Media Browser
