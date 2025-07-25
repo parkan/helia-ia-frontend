@@ -1,14 +1,8 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <script>
-      // Dynamically detect app base path using the script's own location
-      const base = document.createElement('base');
-      base.href = new URL('./', document.currentScript.src).href;
-      document.head.appendChild(base);
-    </script>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="./archive.png" />
+    <link rel="icon" type="image/png" href="%BASE_URL%archive.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Helia Frontend - IPFS Content Explorer</title>
   </head>

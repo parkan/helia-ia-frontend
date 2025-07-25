@@ -4,8 +4,9 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import { fileURLToPath, URL } from 'node:url';
 
 export default defineConfig(() => ({
-  // Use relative paths for better deployment flexibility
-  base: '',
+  // Use VITE_BASE_PATH if provided, otherwise empty string for relative paths
+  // eslint-disable-next-line no-undef
+  base: process.env.VITE_BASE_PATH ?? '',
   plugins: [
     react(),
     nodePolyfills({

@@ -64,13 +64,15 @@ class ServiceWorkerManager {
         // Small delay to ensure cleanup
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        // Use relative path - the dynamic base tag will resolve this correctly
-        const swUrl = `./sw.js?v=${Date.now()}`;
+        // Use Vite's BASE_URL for service worker registration
+        const baseUrl = import.meta.env.BASE_URL || '/';
+        const base = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+        const swUrl = `${base}sw.js?v=${Date.now()}`;
         
-        console.log(`📝 Registering service worker at: ${swUrl}`);
+        console.log(`📝 Registering service worker at: ${swUrl} with scope: ${base}`);
         
         this.registration = await navigator.serviceWorker.register(swUrl, {
-          scope: './',
+          scope: base,
           updateViaCache: 'none', // Always fetch fresh service worker
           type: 'module' // ES module service worker
         });
@@ -669,10 +671,12 @@ class ServiceWorkerManager {
       // Fetch only the two XML files for this specific item using existing message types
       onProgress?.({ step: 'retrieve_files', message: `Fetching XML files for ${baseName}...` });
       
-      // Use relative paths - the dynamic base tag will resolve these correctly
+      // Use Vite's BASE_URL for fetch requests
+      const baseUrl = import.meta.env.BASE_URL || '/';
+      const base = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
       const [filesXmlContent, metaXmlContent] = await Promise.all([
-        fetch(`./ipfs-sw/${targetPair.filesXml.cid}?filename=${targetPair.filesXml.name}`).then(r => r.text()),
-        fetch(`./ipfs-sw/${targetPair.metaXml.cid}?filename=${targetPair.metaXml.name}`).then(r => r.text())
+        fetch(`${base}ipfs-sw/${targetPair.filesXml.cid}?filename=${targetPair.filesXml.name}`).then(r => r.text()),
+        fetch(`${base}ipfs-sw/${targetPair.metaXml.cid}?filename=${targetPair.metaXml.name}`).then(r => r.text())
       ]);
       
       onProgress?.({ step: 'complete', message: 'XML files retrieved successfully.' });

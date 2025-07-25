@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { serviceWorkerManager } from '../serviceWorkerManager';
 import { processXmlPair } from '../xmlParser';
-// No longer need ipfsUrl helper - using relative paths with dynamic base tag
+import { ipfsUrl } from '../utils/ipfsUrl';
 
 export default function DownloadId() {
   const { id: baseName } = useParams();
@@ -197,8 +197,8 @@ export default function DownloadId() {
         console.log(`🚀 Attempting direct XML fetch for ${baseName} in CID: ${cid}`);
         
         // Construct the direct XML file paths
-              const metaXmlUrl = `./ipfs-sw/${cid}/${baseName}_meta.xml`;
-      const filesXmlUrl = `./ipfs-sw/${cid}/${baseName}_files.xml`;
+              const metaXmlUrl = ipfsUrl(`ipfs-sw/${cid}/${baseName}_meta.xml`);
+      const filesXmlUrl = ipfsUrl(`ipfs-sw/${cid}/${baseName}_files.xml`);
         
         console.log(`📥 Fetching XML files directly:`, { metaXmlUrl, filesXmlUrl });
         
@@ -453,13 +453,13 @@ export default function DownloadId() {
                   file.name?.toLowerCase().endsWith('.pdf');
     
     if (isPdf) {
-      const pdfUrl = `./ipfs-sw/${file.cid}?filename=${encodeURIComponent(file.name)}${file.size ? `&size=${file.size}` : ''}`;
-      setPdfLoading(true);
-      setViewingPdf({ 
-        name: file.name, 
-        url: pdfUrl,
-        size: file.size 
-      });
+              const pdfUrl = ipfsUrl(`ipfs-sw/${file.cid}?filename=${encodeURIComponent(file.name)}${file.size ? `&size=${file.size}` : ''}`);
+        setPdfLoading(true);
+        setViewingPdf({ 
+          name: file.name, 
+          url: pdfUrl,
+          size: file.size 
+        });
       return;
     }
 
@@ -468,13 +468,13 @@ export default function DownloadId() {
                     /\.(jpe?g|png|gif|webp|tiff?)$/i.test(file.name || '');
     
     if (isImage) {
-      const imageUrl = `./ipfs-sw/${file.cid}?filename=${encodeURIComponent(file.name)}${file.size ? `&size=${file.size}` : ''}`;
-      setImageLoading(true);
-      setViewingImage({ 
-        name: file.name, 
-        url: imageUrl,
-        size: file.size 
-      });
+              const imageUrl = ipfsUrl(`ipfs-sw/${file.cid}?filename=${encodeURIComponent(file.name)}${file.size ? `&size=${file.size}` : ''}`);
+        setImageLoading(true);
+        setViewingImage({ 
+          name: file.name, 
+          url: imageUrl,
+          size: file.size 
+        });
       return;
     }
 
@@ -483,11 +483,11 @@ export default function DownloadId() {
                         /\.(mp4|avi|mkv|mov|webm|wmv|flv|m4v)$/i.test(file.name || '');
     
     if (isVideoFile) {
-      const videoUrl = `./ipfs-sw/${file.cid}?filename=${encodeURIComponent(file.name)}${file.size ? `&size=${file.size}` : ''}`;
-      setVideoLoading(true);
-      setViewingVideo({ 
-        name: file.name, 
-        url: videoUrl,
+              const videoUrl = ipfsUrl(`ipfs-sw/${file.cid}?filename=${encodeURIComponent(file.name)}${file.size ? `&size=${file.size}` : ''}`);
+        setVideoLoading(true);
+        setViewingVideo({ 
+          name: file.name, 
+          url: videoUrl,
         size: file.size 
       });
       return;
@@ -507,7 +507,7 @@ export default function DownloadId() {
       setProgress({ step: 'download', message: `Downloading ${file.name}...` });
 
       // Fetch file content from IPFS
-      const response = await fetch(`./ipfs-sw/${file.cid}?filename=${encodeURIComponent(file.name)}${file.size ? `&size=${file.size}` : ''}`);
+      const response = await fetch(ipfsUrl(`ipfs-sw/${file.cid}?filename=${encodeURIComponent(file.name)}${file.size ? `&size=${file.size}` : ''}`));
       const fileContent = await response.text();
       
       // Determine MIME type based on file extension
@@ -598,12 +598,12 @@ export default function DownloadId() {
           <div className="bg-black py-6 px-8 flex items-center justify-center relative">
             <div className="absolute left-8 flex items-center space-x-6">
                           <img 
-              src="./ia.png" 
+              src={ipfsUrl("ia.png")} 
               alt="Internet Archive" 
               className="h-12 object-contain"
             />
             <img 
-              src="./ffdw.png" 
+              src={ipfsUrl("ffdw.png")} 
               alt="Freedom of the Press Foundation" 
               className="h-12 object-contain"
             />
