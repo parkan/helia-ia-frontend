@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { serviceWorkerManager } from '../serviceWorkerManager';
-import { parseXML, extractMetadata } from '../xmlParser';
+import { parseXML, extractMetadata, extractFilesInfo } from '../xmlParser';
 import { ipfsUrl } from '../utils/ipfsUrl';
 
 // Type definitions for Home component
@@ -80,73 +80,10 @@ export default function Home(): React.ReactElement {
     window.addEventListener('hashchange', handleHashChange);
 
     // Set up persistent background progress callback for thumbnails
+        // Background processing is no longer needed for thumbnails since we get them from _files.xml
     const backgroundProgressHandler = (progressData) => {
-      console.log('🚀 FRONTEND: Entered background_processing branch!', progressData);
-      // Handle background subdirectory processing updates
-      const timestamp = new Date().toLocaleTimeString();
-      setBackgroundProgress(prev => [...prev, {
-        timestamp,
-        type: progressData.type,
-        message: progressData.message,
-        subdirectory: progressData.subdirectory,
-        files: progressData.files,
-        error: progressData.error
-      }]);
-
-      // CRITICAL: Also integrate newly discovered files into the main results
-      if (progressData.type === 'SUBDIRECTORY_FILES_FOUND' && progressData.files) {
-        console.log(`🔍 Processing subdirectory: ${progressData.subdirectory}`);
-        console.log(`📁 Files found:`, progressData.files.map(f => f.name));
-        
-        // Check if this is a .thumbs directory and extract thumbnail
-        if (progressData.subdirectory && progressData.subdirectory.endsWith('.thumbs')) {
-          console.log(`🎯 Detected .thumbs directory: ${progressData.subdirectory}`);
-          const identifier = progressData.subdirectory.replace('.thumbs', '');
-          console.log(`🔍 Looking for identifier: ${identifier}`);
-          
-          const expectedThumbnailName = `${progressData.subdirectory}/${identifier}_master.intros_000001.jpg`;
-          console.log(`🔍 Expected thumbnail file: ${expectedThumbnailName}`);
-          
-          const thumbnailFile = progressData.files.find(file => {
-            console.log(`🔍 Checking file: ${file.name} vs ${expectedThumbnailName}`);
-            return file.name === expectedThumbnailName;
-          });
-          
-          if (thumbnailFile) {
-            console.log(`🖼️ Found thumbnail for ${identifier}: ${thumbnailFile.name} (CID: ${thumbnailFile.cid})`);
-            const thumbnailUrl = `./ipfs-sw/${thumbnailFile.cid}?filename=${encodeURIComponent(thumbnailFile.name)}`;
-            console.log(`🔗 Generated thumbnail URL: ${thumbnailUrl}`);
-            setItemThumbnails(prev => {
-              const updated = {
-                ...prev,
-                [identifier]: thumbnailUrl
-              };
-              console.log(`🖼️ Updated thumbnails state:`, updated);
-              return updated;
-            });
-          } else {
-            console.log(`❌ No thumbnail found for ${identifier} in ${progressData.subdirectory}`);
-            console.log(`📋 Available files:`, progressData.files.map(f => f.name));
-          }
-        }
-
-        setResults(prevResults => {
-          if (!prevResults) return prevResults;
-          
-          // Add the new files to originalFiles array
-          const updatedOriginalFiles = [...prevResults.originalFiles, ...progressData.files];
-          
-          console.log(`🔄 Integrating ${progressData.files.length} files from ${progressData.subdirectory} into main results`);
-          
-          // Update cache with new files
-          serviceWorkerManager.setCachedDirectoryListing(cid, updatedOriginalFiles);
-          
-          return {
-            ...prevResults,
-            originalFiles: updatedOriginalFiles
-          };
-        });
-      }
+      // Just log for debugging - we don't need background processing for thumbnails anymore
+      console.log(`🔍 BACKGROUND: Received ${progressData.type} (no longer processing for thumbnails)`);
     };
 
     // Register the background progress handler
@@ -271,18 +208,52 @@ export default function Home(): React.ReactElement {
       for (let i = 0; i < data.pairs.length; i++) {
         const pair = data.pairs[i];
         try {
+          console.log(`🔄 PROGRESS: Processing item ${i + 1}/${data.pairs.length}: ${pair.baseName}`);
           setProgress({ 
             step: 'fetch_meta', 
             message: `Loading metadata: ${pair.baseName}... (${i + 1}/${data.pairs.length})` 
           });
           
-          // Fetch only the meta.xml file
-          const response = await fetch(ipfsUrl(`ipfs-sw/${pair.metaXml.cid}?filename=${pair.metaXml.name}`));
-          const metaXmlContent = await response.text();
+          // Fetch both meta.xml and files.xml for this item
+          const [metaResponse, filesResponse] = await Promise.all([
+            fetch(ipfsUrl(`ipfs-sw/${pair.metaXml.cid}?filename=${pair.metaXml.name}`)),
+            fetch(ipfsUrl(`ipfs-sw/${pair.filesXml.cid}?filename=${pair.filesXml.name}`))
+          ]);
           
-          // Parse only the metadata (no files info needed for cards)
+          const metaXmlContent = await metaResponse.text();
+          const filesXmlContent = await filesResponse.text();
+          
+          // Parse metadata
           const parsedMeta = parseXML(metaXmlContent);
           const metadata = extractMetadata(parsedMeta);
+          
+          // Parse files and look for thumbnails
+          const parsedFiles = parseXML(filesXmlContent);
+          const filesInfo = extractFilesInfo(parsedFiles);
+          
+          // Look for thumbnail files (avoiding __ia_thumb*.jpg which get clobbered in merged items)
+          const thumbnailFile = filesInfo.find(file => 
+            file.name && (
+              (file.name.includes('_thumb.jpg') && !file.name.includes('__ia_thumb')) ||
+              (file.name.includes('thumbnail') && file.name.includes('.jpg') && !file.name.includes('__ia_thumb')) ||
+              (file.name.includes('thumb') && file.name.includes('.jpg') && !file.name.includes('__ia_thumb'))
+            )
+          );
+          
+          if (thumbnailFile) {
+            console.log(`🖼️ Found thumbnail for ${pair.baseName}: ${thumbnailFile.name}`);
+            // Find the actual file in the directory listing to get its CID
+            const thumbnailFileInDir = data.originalFiles.find(f => f.name === thumbnailFile.name);
+            if (thumbnailFileInDir) {
+              const thumbnailUrl = ipfsUrl(`ipfs-sw/${thumbnailFileInDir.cid}?filename=${encodeURIComponent(thumbnailFile.name)}`);
+              console.log(`🔗 Setting thumbnail URL for ${pair.baseName}: ${thumbnailUrl}`);
+              
+              setItemThumbnails(prev => ({
+                ...prev,
+                [pair.baseName]: thumbnailUrl
+              }));
+            }
+          }
           
           const newItem = {
             baseName: pair.baseName,
@@ -292,12 +263,20 @@ export default function Home(): React.ReactElement {
           };
           
           processedItems.push(newItem);
+          console.log(`✅ PROGRESS: Processed ${processedItems.length} items so far`);
           
           // 🎯 PROGRESSIVE UPDATE: Update results immediately with new item
-          setResults(prev => ({
-            ...prev,
-            processedContent: [...processedItems] // Update with current items
-          }));
+          // Use setTimeout to break out of React batching and force immediate update
+          await new Promise<void>(resolve => {
+            setTimeout(() => {
+              setResults(prev => ({
+                ...prev,
+                processedContent: [...processedItems] // Update with current items
+              }));
+              console.log(`🔄 PROGRESS: UI updated with ${processedItems.length} items`);
+              resolve();
+            }, 10); // Small delay to force React to flush the update
+          });
           
         } catch (error) {
           console.error(`Error processing metadata for ${pair.baseName}:`, error);
@@ -314,12 +293,19 @@ export default function Home(): React.ReactElement {
           };
           
           processedItems.push(fallbackItem);
+          console.log(`⚠️ PROGRESS: Fallback item created for ${pair.baseName}`);
           
           // 🎯 PROGRESSIVE UPDATE: Update results with fallback item too
-          setResults(prev => ({
-            ...prev,
-            processedContent: [...processedItems]
-          }));
+          await new Promise<void>(resolve => {
+            setTimeout(() => {
+              setResults(prev => ({
+                ...prev,
+                processedContent: [...processedItems]
+              }));
+              console.log(`🔄 PROGRESS: UI updated with ${processedItems.length} items (including fallback)`);
+              resolve();
+            }, 10);
+          });
         }
       }
 
@@ -516,6 +502,8 @@ export default function Home(): React.ReactElement {
                     {results.processedContent.map((item, index) => {
                       const thumbnailUrl = itemThumbnails[item.baseName];
                       console.log(`🖼️ Rendering card for ${item.baseName}, thumbnail URL: ${thumbnailUrl}`);
+                      console.log(`🗂️ Available thumbnails:`, Object.keys(itemThumbnails));
+                      console.log(`📄 Item details:`, { baseName: item.baseName, pair: item.pair });
                       return (
                         <div 
                           key={index} 
