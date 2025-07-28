@@ -1,8 +1,9 @@
+import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import DownloadId from './pages/DownloadId';
 
-function App() {
+function App(): React.ReactElement {
   console.log('🟢 App component rendering');
   console.log('🟢 Current pathname:', window.location.pathname);
   
@@ -17,7 +18,8 @@ function App() {
     );
   } catch (error) {
     console.error('🔴 Error in App component:', error);
-    return <div style={{padding: '20px', color: 'red'}}>App Error: {error.message}</div>;
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return <div style={{padding: '20px', color: 'red'}}>App Error: {errorMessage}</div>;
   }
 }
 

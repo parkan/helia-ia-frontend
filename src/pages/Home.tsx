@@ -1,22 +1,63 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { serviceWorkerManager } from '../serviceWorkerManager';
 import { parseXML, extractMetadata } from '../xmlParser';
 import { ipfsUrl } from '../utils/ipfsUrl';
 
-export default function Home() {
+// Type definitions for Home component
+interface ProgressState {
+  step: string;
+  message: string;
+}
+
+interface FileItem {
+  name: string;
+  size: number;
+  cid: string;
+  [key: string]: any;
+}
+
+interface Results {
+  originalFiles: FileItem[];
+  [key: string]: any;
+}
+
+interface CacheStats {
+  directories: {
+    count: number;
+    sizeBytes: number;
+    sizeKB: number;
+  };
+  total: {
+    count: number;
+    sizeBytes: number;
+    sizeKB: number;
+  };
+  oldestEntry: { timestamp: number; cid: string } | null;
+  newestEntry: { timestamp: number; cid: string } | null;
+}
+
+interface BackgroundProgressItem {
+  [key: string]: any;
+}
+
+interface ItemThumbnails {
+  [baseName: string]: string;
+}
+
+export default function Home(): React.ReactElement {
   console.log('🟢 Home component rendering');
   
   const navigate = useNavigate();
-  const [cid, setCid] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [progress, setProgress] = useState({ step: '', message: '' });
-  const [results, setResults] = useState(null);
-  const [error, setError] = useState('');
-  const [isServiceWorkerReady, setIsServiceWorkerReady] = useState(false);
-  const [cacheStats, setCacheStats] = useState(null);
-  const [backgroundProgress, setBackgroundProgress] = useState([]);
-  const [itemThumbnails, setItemThumbnails] = useState({}); // Map of baseName -> thumbnail URL
+  const [cid, setCid] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [progress, setProgress] = useState<ProgressState>({ step: '', message: '' });
+  const [results, setResults] = useState<Results | null>(null);
+  const [error, setError] = useState<string>('');
+  const [isServiceWorkerReady, setIsServiceWorkerReady] = useState<boolean>(false);
+  const [cacheStats, setCacheStats] = useState<CacheStats | null>(null);
+  const [backgroundProgress, setBackgroundProgress] = useState<BackgroundProgressItem[]>([]);
+  const [itemThumbnails, setItemThumbnails] = useState<ItemThumbnails>({}); // Map of baseName -> thumbnail URL
 
   // Initialize service worker and handle URL fragments on component mount
   useEffect(() => {

@@ -1,17 +1,64 @@
 // Service Worker Manager for IPFS operations
+
+// Type definitions for service worker communication
+interface ServiceWorkerMessage {
+  type: string;
+  id: number;
+  data?: any;
+}
+
+interface ServiceWorkerResponse {
+  id: number;
+  type: string;
+  success: boolean;
+  data?: any;
+  error?: string;
+}
+
+interface PendingMessage {
+  resolve: (value: any) => void;
+  reject: (reason?: any) => void;
+  onProgress?: (progress: any) => void;
+}
+
+interface CacheEntry {
+  files: any[];
+  timestamp: number;
+  cid: string;
+}
+
+interface CacheStats {
+  directories: {
+    count: number;
+    sizeBytes: number;
+    sizeKB: number;
+  };
+  total: {
+    count: number;
+    sizeBytes: number;
+    sizeKB: number;
+  };
+  oldestEntry: { timestamp: number; cid: string } | null;
+  newestEntry: { timestamp: number; cid: string } | null;
+}
+
+type ProgressCallback = (progress: any) => void;
+
 class ServiceWorkerManager {
+  private worker: ServiceWorker | null = null;
+  private messageId: number = 0;
+  private pendingMessages: Map<number, PendingMessage> = new Map();
+  private isInitialized: boolean = false;
+  private registration: ServiceWorkerRegistration | null = null;
+  private messageHandlerSet: boolean = false;
+  private cachePrefix: string = 'helia_directory_';
+  private backgroundProgressCallbacks: Set<ProgressCallback> = new Set();
+  
+  // 🧪 TESTING: Temporarily disable directory cache to test IndexedDB performance
+  private DISABLE_DIRECTORY_CACHE: boolean = true;
+
   constructor() {
-    this.worker = null;
-    this.messageId = 0;
-    this.pendingMessages = new Map();
-    this.isInitialized = false;
-    this.registration = null;
-    this.messageHandlerSet = false;
-    this.cachePrefix = 'helia_directory_';
-    this.backgroundProgressCallbacks = new Set(); // Persistent callbacks for background updates
-    
-    // 🧪 TESTING: Temporarily disable directory cache to test IndexedDB performance
-    this.DISABLE_DIRECTORY_CACHE = true;
+    // Property initialization moved to class field declarations above
   }
 
   /**

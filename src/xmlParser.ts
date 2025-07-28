@@ -16,8 +16,6 @@ const parserOptions = {
   removeNSPrefix: false,
   allowBooleanAttributes: true,
   parseNodeValue: true,
-  parseAttributeValue: true,
-  trimValues: true,
   ignoreDeclaration: false,
   ignorePiTags: false,
   transformTagName: false,

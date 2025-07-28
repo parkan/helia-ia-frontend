@@ -1,4 +1,4 @@
-console.log('🟢 main.jsx module loaded');
+console.log('🟢 main.tsx module loaded');
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
@@ -8,7 +8,7 @@ import './styles/globals.css';
 
 // Determine the base path for React Router from build environment
 // Can be set via VITE_BASE_PATH environment variable during build
-const getBasename = () => {
+const getBasename = (): string => {
   // Read from environment variable set during build
   const envBasePath = import.meta.env.VITE_BASE_PATH;
   
@@ -44,24 +44,33 @@ window.addEventListener('unhandledrejection', (event) => {
 });
 
 // React Error Boundary Component
-// eslint-disable-next-line react/prop-types
-class ErrorBoundary extends React.Component {
-  constructor(props) {
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+  errorInfo: React.ErrorInfo | null;
+}
+
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null, errorInfo: null };
   }
 
-  static getDerivedStateFromError() {
-    return { hasError: true };
+  static getDerivedStateFromError(): ErrorBoundaryState {
+    return { hasError: true, error: null, errorInfo: null };
   }
 
-  componentDidCatch(error, errorInfo) {
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
     console.error('🔴 React Error Boundary caught error:', error);
     console.error('🔴 Error Info:', errorInfo);
     this.setState({ error, errorInfo });
   }
 
-  render() {
+  render(): React.ReactNode {
     if (this.state.hasError) {
       return (
         <div style={{ padding: '20px', color: 'red', fontFamily: 'monospace' }}>
@@ -78,14 +87,18 @@ class ErrorBoundary extends React.Component {
         </div>
       );
     }
-    // eslint-disable-next-line react/prop-types
     return this.props.children;
   }
 }
 
 console.log('🟢 All imports successful, mounting React...');
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+const rootElement = document.getElementById('root');
+if (!rootElement) {
+  throw new Error('Root element not found');
+}
+
+ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <ErrorBoundary>
       <BrowserRouter basename={basename}>
