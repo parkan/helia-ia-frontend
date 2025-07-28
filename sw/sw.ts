@@ -138,11 +138,11 @@ async function doInitialization(): Promise<{ helia: Helia; fs: UnixFS; verifiedF
     const timeoutPromise = new Promise<never>((_, reject) => {
       timeoutId = setTimeout(() => {
         if (!isResolved) {
-          console.error('🚨 TIMEOUT: Helia initialization timeout reached after 8 seconds');
+          console.error('🚨 TIMEOUT: Helia initialization timeout reached after 30 seconds');
           console.error('🚨 This indicates createHelia() is hanging - likely gateway connection issues');
-          reject(new Error('Helia initialization timed out after 8 seconds. Gateway connection may be blocked or slow.'));
+          reject(new Error('Helia initialization timed out after 30 seconds. Gateway connection may be blocked or slow.'));
         }
-      }, 8000);
+      }, 30000);
     });
     
     console.log('🏁 Starting createHelia() race condition...');

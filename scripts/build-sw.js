@@ -31,10 +31,17 @@ const buildOptions = {
     drop: ['console', 'debugger'],
     legalComments: 'none',
     mangleProps: /^_/,
+    ignoreAnnotations: true, // Ignore pure annotations to enable more aggressive tree shaking
+    keepNames: false, // Don't preserve function/class names
   }),
   define: {
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
     'global': 'globalThis',
+    ...(isProduction && {
+      // Define environment variables to help with tree shaking
+      'process.env.LIBP2P_FORCE_PNET': 'false',
+      'process.env.DEBUG': 'false',
+    }),
   },
   banner: {
     js: `// Helia Service Worker - Built with esbuild at ${new Date().toISOString()}`

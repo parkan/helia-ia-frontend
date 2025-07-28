@@ -338,11 +338,11 @@ class ServiceWorkerManager {
       // Set timeout for message
       setTimeout(() => {
         if (this.pendingMessages.has(id)) {
-                      console.error(`⏰ Message timeout for ${type} (id: ${id}) after 90 seconds`);
+                      console.error(`⏰ Message timeout for ${type} (id: ${id}) after 5 minutes`);
           this.pendingMessages.delete(id);
-                      reject(new Error(`Message timeout after 90 seconds for type: ${type}. Service worker may not be responding.`));
+                      reject(new Error(`Message timeout after 5 minutes for type: ${type}. Service worker may not be responding.`));
         }
-              }, 90000); // 90 second timeout for IPFS operations
+              }, 300000); // 5 minute timeout for IPFS operations
     });
   }
 

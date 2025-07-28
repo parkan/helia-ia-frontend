@@ -255,8 +255,17 @@ export default function Home(): React.ReactElement {
         }
       });
       
-      // Step 2: Fetch only meta.xml files for card display
-      setProgress({ step: 'fetch_meta', message: `Fetching metadata for ${data.pairs.length} items...` });
+      // Step 2: Initialize results immediately and populate progressively
+      setProgress({ step: 'fetch_meta', message: `Found ${data.pairs.length} items! Loading metadata progressively...` });
+      
+      // 🚀 PROGRESSIVE LOADING: Initialize results with empty processed content
+      setResults({
+        originalFiles: data.originalFiles,
+        pairs: data.pairs,
+        processedContent: [] // Start empty, will be populated progressively
+      });
+      
+      // 🔄 Fetch metadata progressively and update results as we go
       const processedItems = [];
       
       for (let i = 0; i < data.pairs.length; i++) {
@@ -264,7 +273,7 @@ export default function Home(): React.ReactElement {
         try {
           setProgress({ 
             step: 'fetch_meta', 
-            message: `Fetching metadata for ${pair.baseName}... (${i + 1}/${data.pairs.length})` 
+            message: `Loading metadata: ${pair.baseName}... (${i + 1}/${data.pairs.length})` 
           });
           
           // Fetch only the meta.xml file
@@ -275,16 +284,25 @@ export default function Home(): React.ReactElement {
           const parsedMeta = parseXML(metaXmlContent);
           const metadata = extractMetadata(parsedMeta);
           
-          processedItems.push({
+          const newItem = {
             baseName: pair.baseName,
             metadata: metadata,
             // Store the pair info for later use on detail page
             pair: pair
-          });
+          };
+          
+          processedItems.push(newItem);
+          
+          // 🎯 PROGRESSIVE UPDATE: Update results immediately with new item
+          setResults(prev => ({
+            ...prev,
+            processedContent: [...processedItems] // Update with current items
+          }));
+          
         } catch (error) {
           console.error(`Error processing metadata for ${pair.baseName}:`, error);
           // Fallback to filename-based info
-          processedItems.push({
+          const fallbackItem = {
             baseName: pair.baseName,
             metadata: {
               title: pair.baseName.replace(/[_-]/g, ' '),
@@ -293,17 +311,19 @@ export default function Home(): React.ReactElement {
             },
             pair: pair,
             error: error.message
-          });
+          };
+          
+          processedItems.push(fallbackItem);
+          
+          // 🎯 PROGRESSIVE UPDATE: Update results with fallback item too
+          setResults(prev => ({
+            ...prev,
+            processedContent: [...processedItems]
+          }));
         }
       }
 
-      setProgress({ step: 'complete', message: 'Metadata loaded successfully!' });
-      
-      setResults({
-        originalFiles: data.originalFiles,
-        pairs: data.pairs,
-        processedContent: processedItems
-      });
+      setProgress({ step: 'complete', message: `✅ All ${processedItems.length} items loaded!` });
 
       // TEMP: Add a test thumbnail to verify the thumbnail system works
       if (processedItems.length > 0) {
