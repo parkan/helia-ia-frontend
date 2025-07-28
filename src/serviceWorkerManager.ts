@@ -454,6 +454,8 @@ class ServiceWorkerManager {
     }
   }
 
+
+
   /**
    * Clear old cache entries to free up space
    */

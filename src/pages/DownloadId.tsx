@@ -29,7 +29,7 @@ export default function DownloadId() {
   const [videoLoading, setVideoLoading] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState(null);
   const [backgroundProgress, setBackgroundProgress] = useState([]);
-  const [allDirectoryFiles, setAllDirectoryFiles] = useState([]);
+  // No longer need allDirectoryFiles state - using UnixFS path-based access
 
   useEffect(() => {
     initializeServiceWorker();
@@ -51,44 +51,7 @@ export default function DownloadId() {
     }
   }, [downloadData, filenameFromPath]);
 
-  // Re-correlate files with CIDs when allDirectoryFiles changes (from background processing)
-  useEffect(() => {
-    if (downloadData && allDirectoryFiles.length > 0) {
-      console.log(`🔄 Re-correlating ${downloadData.files.length} files with ${allDirectoryFiles.length} directory files`);
-      
-      // Debug: Show some example file names from both sets
-      const sampleXmlFiles = downloadData.files.slice(0, 3).map(f => f.name);
-      const sampleDirFiles = allDirectoryFiles.slice(0, 3).map(f => f.name);
-      console.log(`📄 Sample XML files:`, sampleXmlFiles);
-      console.log(`📁 Sample directory files:`, sampleDirFiles);
-      
-      const updatedFilesWithCids = downloadData.files.map(file => {
-        const directoryFile = allDirectoryFiles.find(df => df.name === file.name);
-        const hadCid = file.cid != null;
-        const nowHasCid = directoryFile?.cid != null;
-        
-        // Debug: Log files that still have no CID
-        if (!hadCid && !nowHasCid) {
-          console.log(`❌ Still no CID for ${file.name} - not found in directory files`);
-        }
-        
-        if (!hadCid && nowHasCid) {
-          console.log(`✅ Found CID for ${file.name}: ${directoryFile.cid}`);
-        }
-        
-        return {
-          ...file,
-          cid: directoryFile?.cid || file.cid,
-          path: directoryFile?.path || file.name
-        };
-      });
-      
-      setDownloadData(prevData => ({
-        ...prevData,
-        files: updatedFilesWithCids
-      }));
-    }
-  }, [allDirectoryFiles.length, downloadData?.baseName]); // Use length and baseName to trigger re-correlation
+  // No correlation needed - we use UnixFS path-based access with root CID
 
   // Update document title
   useEffect(() => {
@@ -126,7 +89,7 @@ export default function DownloadId() {
         setProgress({ step: 'cache_hit', message: 'Using cached directory data...' });
         
         // Use cached data to find and load the specific item
-        setAllDirectoryFiles(cachedFiles);
+        // No longer setting allDirectoryFiles - using UnixFS direct access
         
         // Extract pairs and find the specific item
         const pairs = await serviceWorkerManager.extractPairs(cachedFiles);
@@ -182,7 +145,7 @@ export default function DownloadId() {
         });
         
         setProgress({ step: 'complete', message: 'Item loaded from cache!' });
-        setAllDirectoryFiles(cachedFiles);
+        // No longer setting allDirectoryFiles - using UnixFS direct access
         
         // Clear success message after 2 seconds
         setTimeout(() => {
@@ -247,54 +210,13 @@ export default function DownloadId() {
         
         console.log(`📚 Loaded ${processedPair.files.length} files for ${baseName} (direct fetch mode)`);
         
-        // Set up background progress callback for subdirectory processing
-        const backgroundProgressHandler = (progressData) => {
-          console.log('🚀 DOWNLOAD: Background progress update:', progressData);
-          
-          // Handle background subdirectory processing updates
-          const timestamp = new Date().toLocaleTimeString();
-          setBackgroundProgress(prev => [...prev, {
-            timestamp,
-            type: progressData.type,
-            message: progressData.message,
-            subdirectory: progressData.subdirectory,
-            files: progressData.files,
-            error: progressData.error
-          }]);
-          
-          // Update the allDirectoryFiles when new files are found
-          if (progressData.type === 'SUBDIRECTORY_FILES_FOUND' && progressData.files) {
-            console.log(`🔍 Processing subdirectory: ${progressData.subdirectory}`);
-            console.log(`📁 Files found:`, progressData.files.map(f => f.name));
-            
-            setAllDirectoryFiles(prev => {
-              const updated = [...prev, ...progressData.files];
-              console.log(`📊 Total directory files: ${updated.length}`);
-              return updated;
-            });
-          }
-        };
-        
-        // Register the background progress handler
-        if (serviceWorkerManager) {
-          serviceWorkerManager.addBackgroundProgressCallback(backgroundProgressHandler);
-        }
+        // No background processing needed - using UnixFS direct access
         
         // Trigger background subdirectory processing in direct fetch mode
         console.log(`🔄 Starting background subdirectory processing for CID: ${cid}`);
         serviceWorkerManager.processSubdirectoriesInBackground(cid);
         
-        // Store cleanup function to remove the callback on unmount
-        const cleanup = () => {
-          if (serviceWorkerManager) {
-            serviceWorkerManager.removeBackgroundProgressCallback(backgroundProgressHandler);
-          }
-        };
-        
-        // Store cleanup function for component unmount
-        window.addEventListener('beforeunload', cleanup);
-        
-        setProgress({ step: 'complete', message: 'Item loaded! Subdirectories processing in background...' });
+        setProgress({ step: 'complete', message: 'Item loaded!' });
         
         // Clear success message after 3 seconds
         setTimeout(() => {
@@ -312,38 +234,7 @@ export default function DownloadId() {
       setProgress({ step: 'listing', message: 'Getting full directory listing...' });
       setBackgroundProgress([]); // Reset background progress
       
-      // Set up background progress callback before making the request
-      const backgroundProgressHandler = (progressData) => {
-        console.log('🚀 DOWNLOAD: Background progress update:', progressData);
-        
-        // Handle background subdirectory processing updates
-        const timestamp = new Date().toLocaleTimeString();
-        setBackgroundProgress(prev => [...prev, {
-          timestamp,
-          type: progressData.type,
-          message: progressData.message,
-          subdirectory: progressData.subdirectory,
-          files: progressData.files,
-          error: progressData.error
-        }]);
-        
-        // Update the allDirectoryFiles when new files are found
-        if (progressData.type === 'SUBDIRECTORY_FILES_FOUND' && progressData.files) {
-          console.log(`🔍 Processing subdirectory: ${progressData.subdirectory}`);
-          console.log(`📁 Files found:`, progressData.files.map(f => f.name));
-          
-          setAllDirectoryFiles(prev => {
-            const updated = [...prev, ...progressData.files];
-            console.log(`📊 Total directory files: ${updated.length}`);
-            return updated;
-          });
-        }
-      };
-      
-      // Register the background progress handler BEFORE making the request
-      if (serviceWorkerManager) {
-        serviceWorkerManager.addBackgroundProgressCallback(backgroundProgressHandler);
-      }
+      // No background processing needed - using UnixFS direct access
       
       const directoryData = await serviceWorkerManager.getItemListing(cid, (progressData) => {
         if (progressData.step === 'directory_listing') {
@@ -358,8 +249,7 @@ export default function DownloadId() {
         }
       });
       
-      // Initialize the all directory files with the initial root files
-      setAllDirectoryFiles(directoryData.originalFiles);
+      // No longer need to track directory files - using UnixFS direct access
       
       // Then fetch the specific item's XML files
       const itemData = await serviceWorkerManager.getSpecificItem(cid, baseName, setProgress);
@@ -435,9 +325,24 @@ export default function DownloadId() {
     return 'application/octet-stream';
   };
 
+  // Helper function to construct IPFS URL for file (uses individual CID or root CID + path)
+  const getFileUrl = (file) => {
+    const fileName = encodeURIComponent(file.name);
+    const sizeParam = file.size ? `&size=${file.size}` : '';
+    
+    if (file.cid) {
+      // Use individual file CID if available
+      return ipfsUrl(`ipfs-sw/${file.cid}?filename=${fileName}${sizeParam}`);
+    } else {
+      // Use root CID + path for UnixFS directory access
+      return ipfsUrl(`ipfs-sw/${cid}/${file.name}?filename=${fileName}${sizeParam}`);
+    }
+  };
+
   const handleFileClick = async (file, skipNavigation = false) => {
-    if (!file.cid) {
-      setError(`Cannot access ${file.name}: No CID available`);
+    // For files without individual CIDs, we can use root CID + path (UnixFS)
+    if (!file.cid && !file.name) {
+      setError(`Cannot access file: No CID or path available`);
       return;
     }
 
@@ -453,13 +358,13 @@ export default function DownloadId() {
                   file.name?.toLowerCase().endsWith('.pdf');
     
     if (isPdf) {
-              const pdfUrl = ipfsUrl(`ipfs-sw/${file.cid}?filename=${encodeURIComponent(file.name)}${file.size ? `&size=${file.size}` : ''}`);
-        setPdfLoading(true);
-        setViewingPdf({ 
-          name: file.name, 
-          url: pdfUrl,
-          size: file.size 
-        });
+      const pdfUrl = getFileUrl(file);
+      setPdfLoading(true);
+      setViewingPdf({ 
+        name: file.name, 
+        url: pdfUrl,
+        size: file.size 
+      });
       return;
     }
 
@@ -468,13 +373,13 @@ export default function DownloadId() {
                     /\.(jpe?g|png|gif|webp|tiff?)$/i.test(file.name || '');
     
     if (isImage) {
-              const imageUrl = ipfsUrl(`ipfs-sw/${file.cid}?filename=${encodeURIComponent(file.name)}${file.size ? `&size=${file.size}` : ''}`);
-        setImageLoading(true);
-        setViewingImage({ 
-          name: file.name, 
-          url: imageUrl,
-          size: file.size 
-        });
+      const imageUrl = getFileUrl(file);
+      setImageLoading(true);
+      setViewingImage({ 
+        name: file.name, 
+        url: imageUrl,
+        size: file.size 
+      });
       return;
     }
 
@@ -483,11 +388,11 @@ export default function DownloadId() {
                         /\.(mp4|avi|mkv|mov|webm|wmv|flv|m4v)$/i.test(file.name || '');
     
     if (isVideoFile) {
-              const videoUrl = ipfsUrl(`ipfs-sw/${file.cid}?filename=${encodeURIComponent(file.name)}${file.size ? `&size=${file.size}` : ''}`);
-        setVideoLoading(true);
-        setViewingVideo({ 
-          name: file.name, 
-          url: videoUrl,
+      const videoUrl = getFileUrl(file);
+      setVideoLoading(true);
+      setViewingVideo({ 
+        name: file.name, 
+        url: videoUrl,
         size: file.size 
       });
       return;
@@ -507,7 +412,7 @@ export default function DownloadId() {
       setProgress({ step: 'download', message: `Downloading ${file.name}...` });
 
       // Fetch file content from IPFS
-      const response = await fetch(ipfsUrl(`ipfs-sw/${file.cid}?filename=${encodeURIComponent(file.name)}${file.size ? `&size=${file.size}` : ''}`));
+      const response = await fetch(getFileUrl(file));
       const fileContent = await response.text();
       
       // Determine MIME type based on file extension
@@ -911,7 +816,7 @@ export default function DownloadId() {
                             <div className="bg-gray-100 border border-gray-300">
                               {formatFiles.map((file, index) => {
                                 const isDownloading = downloadingFiles.has(file.name);
-                                const hasValidCid = file.cid != null;
+                                const hasValidCid = file.cid != null || file.name != null;
                                 const isPdf = file.format?.toLowerCase().includes('pdf') || file.format?.toLowerCase().includes('portable document');
                                 const isImage = /\b(jpe?g|png|gif|webp|tiff?)\b/i.test(file.format || '') ||
                                                 /\.(jpe?g|png|gif|webp|tiff?)$/i.test(file.name || '');

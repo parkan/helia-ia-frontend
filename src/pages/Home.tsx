@@ -59,6 +59,9 @@ export default function Home(): React.ReactElement {
   const [backgroundProgress, setBackgroundProgress] = useState<BackgroundProgressItem[]>([]);
   const [itemThumbnails, setItemThumbnails] = useState<ItemThumbnails>({}); // Map of baseName -> thumbnail URL
 
+  // Debug logging for state changes
+  console.log(`🔍 HOME DEBUG - CID: "${cid}", Results: ${results ? `${results.processedContent?.length || 0} items` : 'null'}, Loading: ${isLoading}`);
+
   // Initialize service worker and handle URL fragments on component mount
   useEffect(() => {
     initializeServiceWorker();
@@ -80,10 +83,26 @@ export default function Home(): React.ReactElement {
     window.addEventListener('hashchange', handleHashChange);
 
     // Set up persistent background progress callback for thumbnails
-        // Background processing is no longer needed for thumbnails since we get them from _files.xml
     const backgroundProgressHandler = (progressData) => {
-      // Just log for debugging - we don't need background processing for thumbnails anymore
-      console.log(`🔍 BACKGROUND: Received ${progressData.type} (no longer processing for thumbnails)`);
+      console.log(`🔍 BACKGROUND: Received ${progressData.type}`);
+      
+      // Update the originalFiles when subdirectory files are found (needed for thumbnail CIDs)
+      if (progressData.type === 'SUBDIRECTORY_FILES_FOUND' && progressData.files) {
+        console.log(`📁 Adding ${progressData.files.length} subdirectory files to originalFiles`);
+        console.log(`🔍 Files from ${progressData.subdirectory}:`, progressData.files.map(f => f.name));
+        
+        setResults(prev => {
+          if (!prev) return prev;
+          
+          const updatedOriginalFiles = [...prev.originalFiles, ...progressData.files];
+          console.log(`📊 Total originalFiles count: ${updatedOriginalFiles.length}`);
+          
+          return {
+            ...prev,
+            originalFiles: updatedOriginalFiles
+          };
+        });
+      }
     };
 
     // Register the background progress handler
@@ -103,22 +122,31 @@ export default function Home(): React.ReactElement {
   // Auto-load cached content when service worker is ready and CID is set
   useEffect(() => {
     const autoLoadCachedContent = async () => {
-      if (isServiceWorkerReady && cid && !results && !isLoading) {
+      // Only auto-load if we don't already have processed content for this CID
+      const hasProcessedContent = results && results.processedContent && results.processedContent.length > 0;
+      
+      console.log(`🔍 AUTO-LOAD DEBUG - SW Ready: ${isServiceWorkerReady}, CID: "${cid}", Has Processed: ${hasProcessedContent}, Loading: ${isLoading}`);
+      
+      if (isServiceWorkerReady && cid && !hasProcessedContent && !isLoading) {
         try {
           // Check if this CID is already cached
           const cachedData = serviceWorkerManager.getCachedDirectoryListing(cid);
           if (cachedData) {
-            console.log(`CID ${cid} found in cache, auto-loading...`);
+            console.log(`🔄 AUTO-LOAD: CID ${cid} found in cache, triggering auto-loading...`);
             await handleSubmit({ preventDefault: () => {} }); // Simulate form submission
+          } else {
+            console.log(`🔍 AUTO-LOAD: CID ${cid} not found in cache, skipping auto-load`);
           }
         } catch (error) {
           console.error('Error checking cache or auto-loading:', error);
         }
+      } else {
+        console.log(`🔍 AUTO-LOAD: Skipping auto-load due to conditions`);
       }
     };
 
     autoLoadCachedContent();
-  }, [isServiceWorkerReady, cid]);
+  }, [isServiceWorkerReady, cid, results]);
 
   // Update URL fragment when CID changes
   useEffect(() => {
@@ -167,6 +195,16 @@ export default function Home(): React.ReactElement {
       setError('Service Worker not ready. Please wait or refresh the page.');
       return;
     }
+
+    // Check if we already have processed content for this CID
+    console.log(`🔍 SUBMIT DEBUG - CID: "${cid}", Results exists: ${!!results}, Processed content: ${results?.processedContent?.length || 0}`);
+    if (results && results.processedContent && results.processedContent.length > 0) {
+      console.log(`🚀 Already have processed content for CID: ${cid} (${results.processedContent.length} items)`);
+      setProgress({ step: 'complete', message: `✅ Already loaded ${results.processedContent.length} items!` });
+      return;
+    }
+    
+    console.log(`🔄 SUBMIT DEBUG - Proceeding with processing because: Results: ${!!results}, Processed: ${results?.processedContent?.length || 0}`);
 
     setIsLoading(true);
     setError('');
@@ -232,27 +270,58 @@ export default function Home(): React.ReactElement {
           const filesInfo = extractFilesInfo(parsedFiles);
           
           // Look for thumbnail files (avoiding __ia_thumb*.jpg which get clobbered in merged items)
-          const thumbnailFile = filesInfo.find(file => 
-            file.name && (
-              (file.name.includes('_thumb.jpg') && !file.name.includes('__ia_thumb')) ||
-              (file.name.includes('thumbnail') && file.name.includes('.jpg') && !file.name.includes('__ia_thumb')) ||
-              (file.name.includes('thumb') && file.name.includes('.jpg') && !file.name.includes('__ia_thumb'))
-            )
-          );
+          console.log(`🔍 THUMBNAIL SEARCH for ${pair.baseName}:`);
+          console.log(`📋 Available files:`, filesInfo.map(f => f.name));
+          
+          // First, look for .thumbs directory files and take the 2nd one (index 1)
+          const thumbsFiles = filesInfo.filter(file => 
+            file.name && file.name.includes('.thumbs/') && file.name.includes('.jpg')
+          ).sort((a, b) => a.name.localeCompare(b.name)); // Sort to ensure consistent order
+          
+          let thumbnailFile = null;
+          
+          if (thumbsFiles.length >= 2) {
+            thumbnailFile = thumbsFiles[1]; // Take 2nd file (index 1)
+            console.log(`🖼️ Found .thumbs directory with ${thumbsFiles.length} files, using 2nd: ${thumbnailFile.name}`);
+          } else if (thumbsFiles.length === 1) {
+            thumbnailFile = thumbsFiles[0]; // Fallback to 1st if only one
+            console.log(`🖼️ Found .thumbs directory with only 1 file, using: ${thumbnailFile.name}`);
+          } else {
+            // Fallback: look for other thumbnail patterns
+            thumbnailFile = filesInfo.find(file => {
+              if (!file.name) return false;
+              
+              const hasThumbJpg = file.name.includes('_thumb.jpg');
+              const hasThumbnail = file.name.includes('thumbnail');
+              const hasThumbAndJpg = file.name.includes('thumb') && file.name.includes('.jpg');
+              const isNotIaThumb = !file.name.includes('__ia_thumb');
+              
+              const matches = (
+                (hasThumbJpg && isNotIaThumb) ||
+                (hasThumbnail && file.name.includes('.jpg') && isNotIaThumb) ||
+                (hasThumbAndJpg && isNotIaThumb)
+              );
+              
+              return matches;
+            });
+            
+            if (thumbnailFile) {
+              console.log(`🖼️ Found fallback thumbnail: ${thumbnailFile.name}`);
+            } else {
+              console.log(`❌ No thumbnail found for ${pair.baseName}`);
+            }
+          }
           
           if (thumbnailFile) {
             console.log(`🖼️ Found thumbnail for ${pair.baseName}: ${thumbnailFile.name}`);
-            // Find the actual file in the directory listing to get its CID
-            const thumbnailFileInDir = data.originalFiles.find(f => f.name === thumbnailFile.name);
-            if (thumbnailFileInDir) {
-              const thumbnailUrl = ipfsUrl(`ipfs-sw/${thumbnailFileInDir.cid}?filename=${encodeURIComponent(thumbnailFile.name)}`);
-              console.log(`🔗 Setting thumbnail URL for ${pair.baseName}: ${thumbnailUrl}`);
-              
-              setItemThumbnails(prev => ({
-                ...prev,
-                [pair.baseName]: thumbnailUrl
-              }));
-            }
+            // Use root CID + path for UnixFS directory access
+            const thumbnailUrl = ipfsUrl(`ipfs-sw/${cid}/${thumbnailFile.name}?filename=${encodeURIComponent(thumbnailFile.name)}`);
+            console.log(`🔗 Setting thumbnail URL for ${pair.baseName}: ${thumbnailUrl}`);
+            
+            setItemThumbnails(prev => ({
+              ...prev,
+              [pair.baseName]: thumbnailUrl
+            }));
           }
           
           const newItem = {
@@ -311,14 +380,7 @@ export default function Home(): React.ReactElement {
 
       setProgress({ step: 'complete', message: `✅ All ${processedItems.length} items loaded!` });
 
-      // TEMP: Add a test thumbnail to verify the thumbnail system works
-      if (processedItems.length > 0) {
-        console.log(`🧪 TEST: Adding test thumbnail for first item: ${processedItems[0].baseName}`);
-        setItemThumbnails(prev => ({
-          ...prev,
-                      [processedItems[0].baseName]: ipfsUrl('archive.png') // Use archive.png as test thumbnail
-        }));
-      }
+
 
       // Update cache stats after successful operation
       const updatedStats = serviceWorkerManager.getCacheStats();
