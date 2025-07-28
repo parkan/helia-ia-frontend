@@ -54,8 +54,8 @@ class ServiceWorkerManager {
   private cachePrefix: string = 'helia_directory_';
   private backgroundProgressCallbacks: Set<ProgressCallback> = new Set();
   
-  // 🧪 TESTING: Temporarily disable directory cache to test IndexedDB performance
-  private DISABLE_DIRECTORY_CACHE: boolean = true;
+  // 🔄 CACHE: Directory cache re-enabled - IndexedDB handles blocks, LocalStorage handles processed directories
+  private DISABLE_DIRECTORY_CACHE: boolean = false;
 
   constructor() {
     // Property initialization moved to class field declarations above

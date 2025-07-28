@@ -11,7 +11,6 @@ const parserOptions = {
   parseTrueNumberOnly: false,
   arrayMode: false,
   parseTagValue: true,
-  parseAttributeValue: true,
   ignoreNameSpace: false,
   removeNSPrefix: false,
   allowBooleanAttributes: true,
