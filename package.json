@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "npm run build-sw && vite",
-    "build": "npm run build-sw && vite build",
+    "build": "NODE_ENV=production npm run build-sw && vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "build-sw": "node scripts/build-sw.js",
