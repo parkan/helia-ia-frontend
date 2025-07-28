@@ -331,7 +331,7 @@ export default function Home() {
                   <div className="flex items-center space-x-2">
                     <div className="w-3 h-3 rounded-full bg-blue-500"></div>
                     <span className="archive-metadata text-blue-600">
-                      Cache: {cacheStats.directories.count} dirs, {cacheStats.files.count} files ({cacheStats.total.sizeKB}KB)
+                      Cache: {cacheStats.directories.count} dirs ({cacheStats.total.sizeKB}KB)
                     </span>
                   </div>
                 )}

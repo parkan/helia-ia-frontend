@@ -6,6 +6,7 @@ import { CID } from 'multiformats/cid';
 import { trustlessGateway } from '@helia/block-brokers';
 import { httpGatewayRouting, delegatedHTTPRouting } from '@helia/routers';
 import { createVerifiedFetch } from '@helia/verified-fetch';
+import { IDBBlockstore } from 'blockstore-idb';
 import type { Helia } from '@helia/interface';
 import type { UnixFS } from '@helia/unixfs';
 
@@ -88,8 +89,15 @@ async function doInitialization(): Promise<{ helia: Helia; fs: UnixFS; verifiedF
     console.log('🚀 Starting Helia initialization with trustless gateway support...');
     const initStartTime = performance.now();
     
+    console.log('📋 Creating IndexedDB blockstore...');
+    const blockstore = new IDBBlockstore('helia-ia-frontend');
+    console.log('🔧 Opening IndexedDB blockstore...');
+    await blockstore.open();
+    
     console.log('📋 Creating Helia HTTP configuration...');
     const config = {
+      // Use IndexedDB blockstore for persistent storage
+      blockstore,
       // Configure block brokers - trustlessGateway without parameters
       blockBrokers: [
         trustlessGateway()

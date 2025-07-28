@@ -8,9 +8,6 @@ class ServiceWorkerManager {
     this.registration = null;
     this.messageHandlerSet = false;
     this.cachePrefix = 'helia_directory_';
-    this.fileCachePrefix = 'helia_file_';
-    this.maxFileSize = 5 * 1024 * 1024; // 5MB max per file
-    this.maxTotalCacheSize = 50 * 1024 * 1024; // 50MB total cache
     this.backgroundProgressCallbacks = new Set(); // Persistent callbacks for background updates
   }
 
@@ -73,8 +70,8 @@ class ServiceWorkerManager {
         
         this.registration = await navigator.serviceWorker.register(swUrl, {
           scope: base,
-          updateViaCache: 'none', // Always fetch fresh service worker
-          type: 'module' // ES module service worker
+          updateViaCache: 'none' // Always fetch fresh service worker
+          // Note: removed 'type: module' as service workers are not ES modules
         });
         
         console.log('📝 Service Worker registered:', this.registration);
@@ -454,121 +451,7 @@ class ServiceWorkerManager {
     return this.sendMessage('EXTRACT_PAIRS', { files });
   }
 
-  /**
-   * Get cached file content from localStorage
-   */
-  getCachedFile(cid) {
-    try {
-      const cacheKey = `${this.fileCachePrefix}${cid}`;
-      const cached = localStorage.getItem(cacheKey);
-      if (cached) {
-        const data = JSON.parse(cached);
-        const now = Date.now();
-        
-        // Check expiry (7 days for files)
-        if (data.timestamp && (now - data.timestamp) < (7 * 24 * 60 * 60 * 1000)) {
-          console.log(`📦 Using cached file for CID: ${cid}`);
-          // Convert base64 back to binary
-          const binaryData = atob(data.content);
-          const bytes = new Uint8Array(binaryData.length);
-          for (let i = 0; i < binaryData.length; i++) {
-            bytes[i] = binaryData.charCodeAt(i);
-          }
-          return bytes;
-        } else {
-          // Expired cache, remove it
-          localStorage.removeItem(cacheKey);
-        }
-      }
-      return null;
-    } catch (error) {
-      console.warn('Failed to read file cache:', error);
-      return null;
-    }
-  }
 
-  /**
-   * Store file content in localStorage
-   */
-  setCachedFile(cid, content) {
-    try {
-      // Don't cache very large files
-      if (content.length > this.maxFileSize) {
-        console.log(`📦 Skipping cache for large file: ${cid} (${content.length} bytes)`);
-        return;
-      }
-
-      // Check total cache size and clean up if needed
-      this.cleanupFileCache();
-
-      const cacheKey = `${this.fileCachePrefix}${cid}`;
-      
-      // Convert binary data to base64 for localStorage
-      let binaryString = '';
-      const bytes = new Uint8Array(content);
-      for (let i = 0; i < bytes.length; i++) {
-        binaryString += String.fromCharCode(bytes[i]);
-      }
-      const base64Content = btoa(binaryString);
-      
-      const data = {
-        content: base64Content,
-        timestamp: Date.now(),
-        cid,
-        size: content.length
-      };
-      
-      localStorage.setItem(cacheKey, JSON.stringify(data));
-      console.log(`💾 Cached file for CID: ${cid} (${content.length} bytes)`);
-    } catch (error) {
-      console.warn('Failed to cache file:', error);
-      // If localStorage is full, try to clear old entries
-      this.cleanupFileCache();
-    }
-  }
-
-  /**
-   * Clean up old file cache entries
-   */
-  cleanupFileCache() {
-    try {
-      const fileCacheKeys = [];
-      let totalSize = 0;
-      
-      // Collect all file cache entries
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith(this.fileCachePrefix)) {
-          try {
-            const data = JSON.parse(localStorage.getItem(key));
-            fileCacheKeys.push({
-              key,
-              timestamp: data.timestamp || 0,
-              size: data.size || 0
-            });
-            totalSize += data.size || 0;
-          } catch (e) {
-            // Invalid cache entry, remove it
-            localStorage.removeItem(key);
-          }
-        }
-      }
-      
-      // If total size exceeds limit, remove oldest entries
-      if (totalSize > this.maxTotalCacheSize) {
-        fileCacheKeys.sort((a, b) => a.timestamp - b.timestamp);
-        
-        while (totalSize > this.maxTotalCacheSize && fileCacheKeys.length > 0) {
-          const oldest = fileCacheKeys.shift();
-          localStorage.removeItem(oldest.key);
-          totalSize -= oldest.size;
-          console.log(`🧹 Removed old file cache entry: ${oldest.key}`);
-        }
-      }
-    } catch (error) {
-      console.warn('Failed to cleanup file cache:', error);
-    }
-  }
 
 
 
@@ -743,30 +626,20 @@ class ServiceWorkerManager {
     try {
       let directoryCount = 0;
       let directorySize = 0;
-      let fileCount = 0;
-      let fileSize = 0;
       const oldestEntry = { timestamp: Date.now(), cid: null };
       const newestEntry = { timestamp: 0, cid: null };
       
-
-      
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && (key.startsWith(this.cachePrefix) || key.startsWith(this.fileCachePrefix))) {
+        if (key && key.startsWith(this.cachePrefix)) {
           const value = localStorage.getItem(key);
           if (value) {
             try {
               const data = JSON.parse(value);
               
-              if (key.startsWith(this.cachePrefix)) {
-                // Directory cache
-                directoryCount++;
-                directorySize += value.length;
-              } else if (key.startsWith(this.fileCachePrefix)) {
-                // File cache
-                fileCount++;
-                fileSize += value.length;
-              }
+              // Directory cache
+              directoryCount++;
+              directorySize += value.length;
               
               if (data.timestamp) {
                 if (data.timestamp < oldestEntry.timestamp) {
@@ -791,15 +664,10 @@ class ServiceWorkerManager {
           sizeBytes: directorySize,
           sizeKB: Math.round(directorySize / 1024)
         },
-        files: {
-          count: fileCount,
-          sizeBytes: fileSize,
-          sizeKB: Math.round(fileSize / 1024)
-        },
         total: {
-          count: directoryCount + fileCount,
-          sizeBytes: directorySize + fileSize,
-          sizeKB: Math.round((directorySize + fileSize) / 1024)
+          count: directoryCount,
+          sizeBytes: directorySize,
+          sizeKB: Math.round(directorySize / 1024)
         },
         oldestEntry: oldestEntry.cid ? oldestEntry : null,
         newestEntry: newestEntry.cid ? newestEntry : null
@@ -808,7 +676,6 @@ class ServiceWorkerManager {
       console.warn('Failed to get cache stats:', error);
       return { 
         directories: { count: 0, sizeBytes: 0, sizeKB: 0 },
-        files: { count: 0, sizeBytes: 0, sizeKB: 0 },
         total: { count: 0, sizeBytes: 0, sizeKB: 0 },
         oldestEntry: null, 
         newestEntry: null 
