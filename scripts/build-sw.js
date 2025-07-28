@@ -25,6 +25,13 @@ const buildOptions = {
   platform: 'browser',
   sourcemap: !isProduction,
   minify: isProduction,
+  // Production optimizations
+  ...(isProduction && {
+    treeShaking: true,
+    drop: ['console', 'debugger'],
+    legalComments: 'none',
+    mangleProps: /^_/,
+  }),
   define: {
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
     'global': 'globalThis',
@@ -33,6 +40,9 @@ const buildOptions = {
     js: `// Helia Service Worker - Built with esbuild at ${new Date().toISOString()}`
   },
   logLevel: 'info',
+  ...(isProduction && {
+    metafile: true,
+  }),
 };
 
 async function build() {
@@ -53,6 +63,13 @@ async function build() {
       console.log(`✅ Service worker built successfully!`);
       console.log(`📍 Output: ${outputPath}`);
       console.log(`📊 Size: ${sizeKB} KB`);
+      
+      // Bundle analysis for production builds
+      if (isProduction && result.metafile) {
+        console.log('\n📋 Bundle Analysis:');
+        const analysis = await esbuild.analyzeMetafile(result.metafile, { verbose: false });
+        console.log(analysis);
+      }
       
       if (result.warnings.length > 0) {
         console.warn('⚠️ Build warnings:');
