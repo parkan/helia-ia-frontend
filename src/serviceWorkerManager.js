@@ -9,6 +9,9 @@ class ServiceWorkerManager {
     this.messageHandlerSet = false;
     this.cachePrefix = 'helia_directory_';
     this.backgroundProgressCallbacks = new Set(); // Persistent callbacks for background updates
+    
+    // 🧪 TESTING: Temporarily disable directory cache to test IndexedDB performance
+    this.DISABLE_DIRECTORY_CACHE = true;
   }
 
   /**
@@ -334,6 +337,12 @@ class ServiceWorkerManager {
    * Get cached directory listing from browser storage
    */
   getCachedDirectoryListing(cid) {
+    // 🧪 TESTING: Skip cache if disabled
+    if (this.DISABLE_DIRECTORY_CACHE) {
+      console.log(`🧪 Directory cache disabled - skipping cache check for CID: ${cid}`);
+      return null;
+    }
+    
     try {
       const cacheKey = `${this.cachePrefix}${cid}`;
       const cached = localStorage.getItem(cacheKey);
@@ -361,6 +370,12 @@ class ServiceWorkerManager {
    * Store directory listing in browser storage
    */
   setCachedDirectoryListing(cid, files) {
+    // 🧪 TESTING: Skip cache if disabled
+    if (this.DISABLE_DIRECTORY_CACHE) {
+      console.log(`🧪 Directory cache disabled - skipping cache storage for CID: ${cid} (${files.length} files)`);
+      return;
+    }
+    
     try {
       const cacheKey = `${this.cachePrefix}${cid}`;
       
