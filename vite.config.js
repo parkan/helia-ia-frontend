@@ -36,13 +36,13 @@ export default defineConfig(() => ({
   
   build: {
     outDir: 'dist',
+    target: 'es2022', // Match service worker ES target
     rollupOptions: {
       input: {
         main: fileURLToPath(new URL('./index.html', import.meta.url)),
       },
       output: {
         manualChunks: {
-          'helia': ['helia', '@helia/unixfs', '@helia/http', '@helia/strings'],
           'vendor': ['react', 'react-dom', 'react-router-dom']
         }
       }

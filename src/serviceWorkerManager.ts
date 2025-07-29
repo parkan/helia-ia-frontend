@@ -1,17 +1,64 @@
 // Service Worker Manager for IPFS operations
+
+// Type definitions for service worker communication
+interface ServiceWorkerMessage {
+  type: string;
+  id: number;
+  data?: any;
+}
+
+interface ServiceWorkerResponse {
+  id: number;
+  type: string;
+  success: boolean;
+  data?: any;
+  error?: string;
+}
+
+interface PendingMessage {
+  resolve: (value: any) => void;
+  reject: (reason?: any) => void;
+  onProgress?: (progress: any) => void;
+}
+
+interface CacheEntry {
+  files: any[];
+  timestamp: number;
+  cid: string;
+}
+
+interface CacheStats {
+  directories: {
+    count: number;
+    sizeBytes: number;
+    sizeKB: number;
+  };
+  total: {
+    count: number;
+    sizeBytes: number;
+    sizeKB: number;
+  };
+  oldestEntry: { timestamp: number; cid: string } | null;
+  newestEntry: { timestamp: number; cid: string } | null;
+}
+
+type ProgressCallback = (progress: any) => void;
+
 class ServiceWorkerManager {
+  private worker: ServiceWorker | null = null;
+  private messageId: number = 0;
+  private pendingMessages: Map<number, PendingMessage> = new Map();
+  private isInitialized: boolean = false;
+  private registration: ServiceWorkerRegistration | null = null;
+  private messageHandlerSet: boolean = false;
+  private cachePrefix: string = 'helia_directory_';
+  private backgroundProgressCallbacks: Set<ProgressCallback> = new Set();
+  
+  // 🔄 CACHE: Directory cache re-enabled - IndexedDB handles blocks, LocalStorage handles processed directories
+  private DISABLE_DIRECTORY_CACHE: boolean = false;
+
   constructor() {
-    this.worker = null;
-    this.messageId = 0;
-    this.pendingMessages = new Map();
-    this.isInitialized = false;
-    this.registration = null;
-    this.messageHandlerSet = false;
-    this.cachePrefix = 'helia_directory_';
-    this.fileCachePrefix = 'helia_file_';
-    this.maxFileSize = 5 * 1024 * 1024; // 5MB max per file
-    this.maxTotalCacheSize = 50 * 1024 * 1024; // 50MB total cache
-    this.backgroundProgressCallbacks = new Set(); // Persistent callbacks for background updates
+    // Property initialization moved to class field declarations above
   }
 
   /**
@@ -64,14 +111,17 @@ class ServiceWorkerManager {
         // Small delay to ensure cleanup
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        // Register service worker with cache busting
-        const base = import.meta.env.BASE_URL || '/';
+        // Use Vite's BASE_URL for service worker registration
+        const baseUrl = import.meta.env.BASE_URL || '/';
+        const base = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
         const swUrl = `${base}sw.js?v=${Date.now()}`;
+        
+        console.log(`📝 Registering service worker at: ${swUrl} with scope: ${base}`);
         
         this.registration = await navigator.serviceWorker.register(swUrl, {
           scope: base,
-          updateViaCache: 'none', // Always fetch fresh service worker
-          type: 'module' // ES module service worker
+          updateViaCache: 'none' // Always fetch fresh service worker
+          // Note: removed 'type: module' as service workers are not ES modules
         });
         
         console.log('📝 Service Worker registered:', this.registration);
@@ -196,7 +246,7 @@ class ServiceWorkerManager {
     // Handle progress updates separately
     if (type === 'PROGRESS_UPDATE') {
       // Find any pending messages that might want this progress update
-      for (const [messageId, pendingMessage] of this.pendingMessages) {
+      for (const [, pendingMessage] of this.pendingMessages) {
         if (pendingMessage.onProgress && typeof pendingMessage.onProgress === 'function') {
           pendingMessage.onProgress(data);
         }
@@ -218,7 +268,7 @@ class ServiceWorkerManager {
       };
       
       // Send to any pending messages that might want this progress update
-      for (const [messageId, pendingMessage] of this.pendingMessages) {
+      for (const [, pendingMessage] of this.pendingMessages) {
         if (pendingMessage.onProgress && typeof pendingMessage.onProgress === 'function') {
           pendingMessage.onProgress(progressData);
         }
@@ -288,11 +338,11 @@ class ServiceWorkerManager {
       // Set timeout for message
       setTimeout(() => {
         if (this.pendingMessages.has(id)) {
-                      console.error(`⏰ Message timeout for ${type} (id: ${id}) after 90 seconds`);
+                      console.error(`⏰ Message timeout for ${type} (id: ${id}) after 5 minutes`);
           this.pendingMessages.delete(id);
-                      reject(new Error(`Message timeout after 90 seconds for type: ${type}. Service worker may not be responding.`));
+                      reject(new Error(`Message timeout after 5 minutes for type: ${type}. Service worker may not be responding.`));
         }
-              }, 90000); // 90 second timeout for IPFS operations
+              }, 300000); // 5 minute timeout for IPFS operations
     });
   }
 
@@ -334,6 +384,12 @@ class ServiceWorkerManager {
    * Get cached directory listing from browser storage
    */
   getCachedDirectoryListing(cid) {
+    // 🧪 TESTING: Skip cache if disabled
+    if (this.DISABLE_DIRECTORY_CACHE) {
+      console.log(`🧪 Directory cache disabled - skipping cache check for CID: ${cid}`);
+      return null;
+    }
+    
     try {
       const cacheKey = `${this.cachePrefix}${cid}`;
       const cached = localStorage.getItem(cacheKey);
@@ -361,6 +417,12 @@ class ServiceWorkerManager {
    * Store directory listing in browser storage
    */
   setCachedDirectoryListing(cid, files) {
+    // 🧪 TESTING: Skip cache if disabled
+    if (this.DISABLE_DIRECTORY_CACHE) {
+      console.log(`🧪 Directory cache disabled - skipping cache storage for CID: ${cid} (${files.length} files)`);
+      return;
+    }
+    
     try {
       const cacheKey = `${this.cachePrefix}${cid}`;
       
@@ -391,6 +453,8 @@ class ServiceWorkerManager {
       this.clearOldCacheEntries();
     }
   }
+
+
 
   /**
    * Clear old cache entries to free up space
@@ -451,121 +515,7 @@ class ServiceWorkerManager {
     return this.sendMessage('EXTRACT_PAIRS', { files });
   }
 
-  /**
-   * Get cached file content from localStorage
-   */
-  getCachedFile(cid) {
-    try {
-      const cacheKey = `${this.fileCachePrefix}${cid}`;
-      const cached = localStorage.getItem(cacheKey);
-      if (cached) {
-        const data = JSON.parse(cached);
-        const now = Date.now();
-        
-        // Check expiry (7 days for files)
-        if (data.timestamp && (now - data.timestamp) < (7 * 24 * 60 * 60 * 1000)) {
-          console.log(`📦 Using cached file for CID: ${cid}`);
-          // Convert base64 back to binary
-          const binaryData = atob(data.content);
-          const bytes = new Uint8Array(binaryData.length);
-          for (let i = 0; i < binaryData.length; i++) {
-            bytes[i] = binaryData.charCodeAt(i);
-          }
-          return bytes;
-        } else {
-          // Expired cache, remove it
-          localStorage.removeItem(cacheKey);
-        }
-      }
-      return null;
-    } catch (error) {
-      console.warn('Failed to read file cache:', error);
-      return null;
-    }
-  }
 
-  /**
-   * Store file content in localStorage
-   */
-  setCachedFile(cid, content) {
-    try {
-      // Don't cache very large files
-      if (content.length > this.maxFileSize) {
-        console.log(`📦 Skipping cache for large file: ${cid} (${content.length} bytes)`);
-        return;
-      }
-
-      // Check total cache size and clean up if needed
-      this.cleanupFileCache();
-
-      const cacheKey = `${this.fileCachePrefix}${cid}`;
-      
-      // Convert binary data to base64 for localStorage
-      let binaryString = '';
-      const bytes = new Uint8Array(content);
-      for (let i = 0; i < bytes.length; i++) {
-        binaryString += String.fromCharCode(bytes[i]);
-      }
-      const base64Content = btoa(binaryString);
-      
-      const data = {
-        content: base64Content,
-        timestamp: Date.now(),
-        cid,
-        size: content.length
-      };
-      
-      localStorage.setItem(cacheKey, JSON.stringify(data));
-      console.log(`💾 Cached file for CID: ${cid} (${content.length} bytes)`);
-    } catch (error) {
-      console.warn('Failed to cache file:', error);
-      // If localStorage is full, try to clear old entries
-      this.cleanupFileCache();
-    }
-  }
-
-  /**
-   * Clean up old file cache entries
-   */
-  cleanupFileCache() {
-    try {
-      const fileCacheKeys = [];
-      let totalSize = 0;
-      
-      // Collect all file cache entries
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith(this.fileCachePrefix)) {
-          try {
-            const data = JSON.parse(localStorage.getItem(key));
-            fileCacheKeys.push({
-              key,
-              timestamp: data.timestamp || 0,
-              size: data.size || 0
-            });
-            totalSize += data.size || 0;
-          } catch (e) {
-            // Invalid cache entry, remove it
-            localStorage.removeItem(key);
-          }
-        }
-      }
-      
-      // If total size exceeds limit, remove oldest entries
-      if (totalSize > this.maxTotalCacheSize) {
-        fileCacheKeys.sort((a, b) => a.timestamp - b.timestamp);
-        
-        while (totalSize > this.maxTotalCacheSize && fileCacheKeys.length > 0) {
-          const oldest = fileCacheKeys.shift();
-          localStorage.removeItem(oldest.key);
-          totalSize -= oldest.size;
-          console.log(`🧹 Removed old file cache entry: ${oldest.key}`);
-        }
-      }
-    } catch (error) {
-      console.warn('Failed to cleanup file cache:', error);
-    }
-  }
 
 
 
@@ -668,9 +618,12 @@ class ServiceWorkerManager {
       // Fetch only the two XML files for this specific item using existing message types
       onProgress?.({ step: 'retrieve_files', message: `Fetching XML files for ${baseName}...` });
       
+      // Use Vite's BASE_URL for fetch requests
+      const baseUrl = import.meta.env.BASE_URL || '/';
+      const base = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
       const [filesXmlContent, metaXmlContent] = await Promise.all([
-        fetch(`ipfs-sw/${targetPair.filesXml.cid}?filename=${targetPair.filesXml.name}`).then(r => r.text()),
-        fetch(`ipfs-sw/${targetPair.metaXml.cid}?filename=${targetPair.metaXml.name}`).then(r => r.text())
+        fetch(`${base}ipfs-sw/${targetPair.filesXml.cid}?filename=${targetPair.filesXml.name}`).then(r => r.text()),
+        fetch(`${base}ipfs-sw/${targetPair.metaXml.cid}?filename=${targetPair.metaXml.name}`).then(r => r.text())
       ]);
       
       onProgress?.({ step: 'complete', message: 'XML files retrieved successfully.' });
@@ -737,30 +690,20 @@ class ServiceWorkerManager {
     try {
       let directoryCount = 0;
       let directorySize = 0;
-      let fileCount = 0;
-      let fileSize = 0;
       const oldestEntry = { timestamp: Date.now(), cid: null };
       const newestEntry = { timestamp: 0, cid: null };
       
-
-      
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && (key.startsWith(this.cachePrefix) || key.startsWith(this.fileCachePrefix))) {
+        if (key && key.startsWith(this.cachePrefix)) {
           const value = localStorage.getItem(key);
           if (value) {
             try {
               const data = JSON.parse(value);
               
-              if (key.startsWith(this.cachePrefix)) {
-                // Directory cache
-                directoryCount++;
-                directorySize += value.length;
-              } else if (key.startsWith(this.fileCachePrefix)) {
-                // File cache
-                fileCount++;
-                fileSize += value.length;
-              }
+              // Directory cache
+              directoryCount++;
+              directorySize += value.length;
               
               if (data.timestamp) {
                 if (data.timestamp < oldestEntry.timestamp) {
@@ -785,15 +728,10 @@ class ServiceWorkerManager {
           sizeBytes: directorySize,
           sizeKB: Math.round(directorySize / 1024)
         },
-        files: {
-          count: fileCount,
-          sizeBytes: fileSize,
-          sizeKB: Math.round(fileSize / 1024)
-        },
         total: {
-          count: directoryCount + fileCount,
-          sizeBytes: directorySize + fileSize,
-          sizeKB: Math.round((directorySize + fileSize) / 1024)
+          count: directoryCount,
+          sizeBytes: directorySize,
+          sizeKB: Math.round(directorySize / 1024)
         },
         oldestEntry: oldestEntry.cid ? oldestEntry : null,
         newestEntry: newestEntry.cid ? newestEntry : null
@@ -802,7 +740,6 @@ class ServiceWorkerManager {
       console.warn('Failed to get cache stats:', error);
       return { 
         directories: { count: 0, sizeBytes: 0, sizeKB: 0 },
-        files: { count: 0, sizeBytes: 0, sizeKB: 0 },
         total: { count: 0, sizeBytes: 0, sizeKB: 0 },
         oldestEntry: null, 
         newestEntry: null 

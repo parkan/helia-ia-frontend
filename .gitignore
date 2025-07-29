@@ -75,6 +75,7 @@ Thumbs.db
 # Temporary folders
 tmp/
 temp/
+test-server/
 
 # DevContainer volumes
 .devcontainer/.volumes/
