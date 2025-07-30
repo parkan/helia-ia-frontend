@@ -29,6 +29,16 @@ interface ProcessedItem {
   metadata: any;
   pair: any;
   error?: string;
+  filesInfo?: any[];
+}
+
+type ItemCategory = 'Videos' | 'Documents' | 'Photos' | 'Other';
+
+interface CategorizedItems {
+  Videos: ProcessedItem[];
+  Documents: ProcessedItem[];
+  Photos: ProcessedItem[];
+  Other: ProcessedItem[];
 }
 
 interface FileItem {
@@ -77,6 +87,57 @@ export default function Home(): React.ReactElement {
   const [cacheStats, setCacheStats] = useState<CacheStats | null>(null);
 
   const [itemThumbnails, setItemThumbnails] = useState<ItemThumbnails>({}); // Map of baseName -> thumbnail URL
+  const [categorizedView, setCategorizedView] = useState<boolean>(false); // Toggle for categorized vs list view
+
+  // Categorization function - determines item category based on file types
+  const categorizeItem = (item: ProcessedItem): ItemCategory => {
+    // Extract files from the item's filesInfo (from XML parsing) or pair data as fallback
+    const files = item.filesInfo || item.pair?.files || [];
+    
+    // Check for video formats (common video extensions)
+    const hasVideo = files.some((file: any) => {
+      const name = file.name?.toLowerCase() || '';
+      return name.match(/\.(mp4|avi|mov|wmv|flv|webm|mkv|m4v|3gp|ogv)$/);
+    });
+    
+    if (hasVideo) return 'Videos';
+    
+    // Check for PDF documents
+    const hasPDF = files.some((file: any) => {
+      const name = file.name?.toLowerCase() || '';
+      return name.endsWith('.pdf');
+    });
+    
+    if (hasPDF) return 'Documents';
+    
+    // Check for image formats
+    const hasImages = files.some((file: any) => {
+      const name = file.name?.toLowerCase() || '';
+      return name.match(/\.(jpg|jpeg|png|gif|bmp|tiff|svg|webp)$/);
+    });
+    
+    if (hasImages) return 'Photos';
+    
+    // Default to Other
+    return 'Other';
+  };
+
+  // Function to organize items by category
+  const categorizeItems = (items: ProcessedItem[]): CategorizedItems => {
+    const categorized: CategorizedItems = {
+      Videos: [],
+      Documents: [],
+      Photos: [],
+      Other: []
+    };
+    
+    items.forEach(item => {
+      const category = categorizeItem(item);
+      categorized[category].push(item);
+    });
+    
+    return categorized;
+  };
 
 
 
@@ -258,7 +319,9 @@ export default function Home(): React.ReactElement {
             baseName: pair.baseName,
             metadata: metadata,
             // Store the pair info for later use on detail page
-            pair: pair
+            pair: pair,
+            // Store files info for categorization
+            filesInfo: filesInfo
           };
           
           processedItems.push(newItem);
@@ -346,6 +409,70 @@ export default function Home(): React.ReactElement {
 
     // If same CID, process it directly
     processData(trimmedInput);
+  };
+
+  // Helper function to render an individual item card
+  const renderItemCard = (item: ProcessedItem, index: number) => {
+    const thumbnailUrl = itemThumbnails[item.baseName];
+    return (
+      <div 
+        key={index} 
+        className="archive-card p-5 hover:shadow-lg transition-shadow duration-200 cursor-pointer"
+        onClick={() => navigateToDownload(item.baseName)}
+      >
+        {/* Archive Logo or Thumbnail */}
+        <div className="w-full h-32 mb-4 flex items-center justify-center p-4 bg-gray-100 rounded">
+          {thumbnailUrl ? (
+            <img 
+              src={thumbnailUrl} 
+              alt={`Thumbnail for ${item.metadata.title}`}
+              className="max-w-full max-h-full object-contain rounded"
+              onError={(e) => {
+                // Fallback to archive logo if thumbnail fails to load
+                // @ts-ignore - event target properties exist
+                e.target.src = "./archive.png";
+                // @ts-ignore - event target properties exist  
+                e.target.alt = "Internet Archive";
+              }}
+            />
+          ) : (
+            <img 
+              src={ipfsUrl("archive.png")} 
+              alt="Internet Archive"
+              className="max-w-full max-h-full object-contain"
+            />
+          )}
+        </div>
+
+        {/* Title */}
+        <h3 className="font-bold text-base mb-2 line-clamp-2 min-h-[3rem]" 
+            style={{color: 'var(--archive-text)'}}
+            title={item.metadata.title}>
+          {item.metadata.title}
+        </h3>
+
+        {/* Creator/Uploader */}
+        <div className="archive-metadata text-sm mb-4">
+          {item.metadata.creator ? (
+            <p>by <span className="font-medium">{item.metadata.creator}</span></p>
+          ) : (
+            <p>by <span className="font-medium">Unknown</span></p>
+          )}
+        </div>
+
+        {/* Action Button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            navigateToDownload(item.baseName);
+          }}
+          className="w-full px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+          title="Browse and view files from this item"
+        >
+          Browse & View Files
+        </button>
+      </div>
+    );
   };
 
   const navigateToDownload = (baseName: string) => {
@@ -449,6 +576,30 @@ export default function Home(): React.ReactElement {
                 {isLoading ? 'Loading...' : 'Browse Content'}
               </button>
             </form>
+            
+            {/* Categorized View Toggle */}
+            {results && results.processedContent && results.processedContent.length > 0 && (
+              <div className="mt-4 flex items-center space-x-3">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={categorizedView}
+                    onChange={(e) => setCategorizedView(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700">
+                    Categorized View
+                  </span>
+                </label>
+                <span className="text-xs text-gray-500">
+                  Group items by type (
+                  <a href="#category-videos" className="text-blue-600 hover:text-blue-800 underline">Videos</a>, 
+                  <a href="#category-documents" className="text-blue-600 hover:text-blue-800 underline">Documents</a>, 
+                  <a href="#category-photos" className="text-blue-600 hover:text-blue-800 underline">Photos</a>, 
+                  <a href="#category-other" className="text-blue-600 hover:text-blue-800 underline">Other</a>)
+                </span>
+              </div>
+            )}
           </div>
 
           {progress.message && (
@@ -488,77 +639,49 @@ export default function Home(): React.ReactElement {
               </div>
 
               <div className="space-y-6">
-                <h2 className="text-2xl font-bold" style={{color: 'var(--archive-text)'}}>Media Items</h2>
-
                 {results.processedContent.length === 0 ? (
                   <div className="text-center py-12 archive-metadata">
                     <p className="text-lg mb-2">No media items found in this CID.</p>
                     <p className="text-sm">This browser looks for items with metadata and file information.</p>
                   </div>
+                ) : categorizedView ? (
+                  // Categorized View
+                  (() => {
+                    const categorized = categorizeItems(results.processedContent);
+                    const categories: ItemCategory[] = ['Videos', 'Documents', 'Photos', 'Other'];
+                    
+                    return (
+                      <div className="space-y-8">
+                        {categories.map(category => {
+                          const categoryItems = categorized[category];
+                          if (categoryItems.length === 0) return null;
+                          
+                          return (
+                            <div key={category} id={`category-${category.toLowerCase()}`} className="space-y-4">
+                              <div className="flex items-center space-x-2">
+                                <h2 className="text-2xl font-bold" style={{color: 'var(--archive-text)'}}>
+                                  {category}
+                                </h2>
+                                <span className="bg-gray-100 text-gray-600 text-sm font-medium px-2 py-1 rounded-full">
+                                  {categoryItems.length}
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                {categoryItems.map((item, index) => renderItemCard(item, index))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {results.processedContent.map((item: ProcessedItem, index: number) => {
-                      const thumbnailUrl = itemThumbnails[item.baseName];
-                      return (
-                        <div 
-                          key={index} 
-                          className="archive-card p-5 hover:shadow-lg transition-shadow duration-200 cursor-pointer"
-                          onClick={() => navigateToDownload(item.baseName)}
-                        >
-                          {/* Archive Logo or Thumbnail */}
-                          <div className="w-full h-32 mb-4 flex items-center justify-center p-4 bg-gray-100 rounded">
-                            {thumbnailUrl ? (
-                              <img 
-                                src={thumbnailUrl} 
-                                alt={`Thumbnail for ${item.metadata.title}`}
-                                className="max-w-full max-h-full object-contain rounded"
-                                onError={(e) => {
-                                  // Fallback to archive logo if thumbnail fails to load
-                                  // @ts-ignore - event target properties exist
-                                  e.target.src = "./archive.png";
-                                  // @ts-ignore - event target properties exist  
-                                  e.target.alt = "Internet Archive";
-                                }}
-                              />
-                            ) : (
-                              <img 
-                                src={ipfsUrl("archive.png")} 
-                                alt="Internet Archive"
-                                className="max-w-full max-h-full object-contain"
-                              />
-                            )}
-                          </div>
-
-                          {/* Title */}
-                          <h3 className="font-bold text-base mb-2 line-clamp-2 min-h-[3rem]" 
-                              style={{color: 'var(--archive-text)'}}
-                              title={item.metadata.title}>
-                            {item.metadata.title}
-                          </h3>
-
-                          {/* Creator/Uploader */}
-                          <div className="archive-metadata text-sm mb-4">
-                            {item.metadata.creator ? (
-                              <p>by <span className="font-medium">{item.metadata.creator}</span></p>
-                            ) : (
-                              <p>by <span className="font-medium">Unknown</span></p>
-                            )}
-                          </div>
-
-                          {/* Action Button */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigateToDownload(item.baseName);
-                            }}
-                            className="w-full px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-                            title="Browse and view files from this item"
-                          >
-                            Browse & View Files
-                          </button>
-                        </div>
-                      );
-                    })}
+                  // List View
+                  <div className="space-y-4">
+                    <h2 className="text-2xl font-bold" style={{color: 'var(--archive-text)'}}>Media Items</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      {results.processedContent.map((item: ProcessedItem, index: number) => renderItemCard(item, index))}
+                    </div>
                   </div>
                 )}
               </div>
