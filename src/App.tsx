@@ -1,20 +1,33 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import Home from './pages/Home';
 import DownloadId from './pages/DownloadId';
 
 function App(): React.ReactElement {
+  const location = useLocation();
+  const isHomePage = location.pathname === '/';
+  
   console.log('🟢 App component rendering');
-  console.log('🟢 Current pathname:', window.location.pathname);
+  console.log('🟢 Current pathname:', location.pathname);
+  console.log('🟢 Is home page:', isHomePage);
   
   try {
     return (
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/download/:id" element={<DownloadId />} />
-        <Route path="/download/:id/:filename" element={<DownloadId />} />
-        <Route path="*" element={<div style={{padding: '20px', color: 'red'}}>🔍 Route not found for: {window.location.pathname}</div>} />
-      </Routes>
+      <>
+        {/* Always render Home component, but hide when not on home route */}
+        <div style={{ display: isHomePage ? 'block' : 'none' }}>
+          <Home />
+        </div>
+        
+        {/* Render download routes only when not on home page */}
+        {!isHomePage && (
+          <Routes>
+            <Route path="/download/:id" element={<DownloadId />} />
+            <Route path="/download/:id/:filename" element={<DownloadId />} />
+            <Route path="*" element={<div style={{padding: '20px', color: 'red'}}>🔍 Route not found for: {location.pathname}</div>} />
+          </Routes>
+        )}
+      </>
     );
   } catch (error) {
     console.error('🔴 Error in App component:', error);
