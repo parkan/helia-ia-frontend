@@ -17,6 +17,10 @@
   --archive-orange: #fd7e14;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   font-family: 'Helvetica Neue', Helvetica, Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   color: var(--archive-text);
