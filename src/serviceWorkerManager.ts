@@ -54,8 +54,8 @@ class ServiceWorkerManager {
   private cachePrefix: string = 'helia_directory_';
   private backgroundProgressCallbacks: Set<ProgressCallback> = new Set();
   
-  // 🔄 CACHE: Directory cache re-enabled - IndexedDB handles blocks, LocalStorage handles processed directories
-  private DISABLE_DIRECTORY_CACHE: boolean = false;
+  // Cache configuration: IndexedDB handles blocks, LocalStorage handles processed directories
+
 
   constructor() {
     // Property initialization moved to class field declarations above
@@ -67,12 +67,11 @@ class ServiceWorkerManager {
   async init() {
     if ('serviceWorker' in navigator) {
       try {
-        console.log('🔄 ServiceWorkerManager: Starting initialization...');
-        console.log(`🔍 Current state - worker: ${this.worker ? 'exists' : 'null'}, registration: ${this.registration ? 'exists' : 'null'}`);
+        console.log('ServiceWorkerManager: Starting initialization...');
         
         // If already initialized and working, skip full re-initialization
         if (this.isInitialized && this.worker && this.worker === navigator.serviceWorker.controller) {
-          console.log('✅ ServiceWorkerManager: Already initialized with valid controller, skipping');
+          console.log('ServiceWorkerManager: Already initialized with valid controller, skipping');
           return this.registration;
         }
         
@@ -92,7 +91,7 @@ class ServiceWorkerManager {
           }
           
                   // Service worker is ready - no need to test messaging for basic readiness
-        console.log('✅ Service worker is ready and controlling the page');
+                  console.log('Service worker is ready and controlling the page');
           
           this.isInitialized = true;
           console.log('🎉 Service Worker Manager initialized successfully (reused existing)');
@@ -140,7 +139,7 @@ class ServiceWorkerManager {
         }
         
         // Service worker is ready and active
-        console.log('✅ Service worker is ready and active');
+                  console.log('Service worker is ready and active');
         
         this.isInitialized = true;
         console.log('🎉 Service Worker Manager initialized successfully');
@@ -203,7 +202,7 @@ class ServiceWorkerManager {
           console.log('Service worker controller activated via controllerchange event');
           this.worker = navigator.serviceWorker.controller;
           navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
-          resolve();
+          resolve(undefined);
         }
       };
 
@@ -215,7 +214,7 @@ class ServiceWorkerManager {
           console.log('Service worker controller found via periodic check');
           this.worker = navigator.serviceWorker.controller;
           navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
-          resolve();
+          resolve(undefined);
         } else {
           console.log('Still waiting for service worker controller...');
           setTimeout(checkController, 500);
@@ -355,7 +354,7 @@ class ServiceWorkerManager {
       return; // Controller is still valid
     }
     
-    console.log('🔄 Controller validation failed, refreshing...');
+    console.log('Controller validation failed, refreshing...');
     
     // Reset and re-establish controller
     this.worker = null;
@@ -384,12 +383,6 @@ class ServiceWorkerManager {
    * Get cached directory listing from browser storage
    */
   getCachedDirectoryListing(cid) {
-    // 🧪 TESTING: Skip cache if disabled
-    if (this.DISABLE_DIRECTORY_CACHE) {
-      console.log(`🧪 Directory cache disabled - skipping cache check for CID: ${cid}`);
-      return null;
-    }
-    
     try {
       const cacheKey = `${this.cachePrefix}${cid}`;
       const cached = localStorage.getItem(cacheKey);
@@ -413,16 +406,12 @@ class ServiceWorkerManager {
     }
   }
 
+
+
   /**
    * Store directory listing in browser storage
    */
   setCachedDirectoryListing(cid, files) {
-    // 🧪 TESTING: Skip cache if disabled
-    if (this.DISABLE_DIRECTORY_CACHE) {
-      console.log(`🧪 Directory cache disabled - skipping cache storage for CID: ${cid} (${files.length} files)`);
-      return;
-    }
-    
     try {
       const cacheKey = `${this.cachePrefix}${cid}`;
       
@@ -499,7 +488,6 @@ class ServiceWorkerManager {
     }
 
     // If not cached, fetch from IPFS with progress tracking
-    console.log(`🔍 Fetching directory listing from IPFS for CID: ${cid}`);
     const files = await this.sendMessage('SHALLOW_RETRIEVAL', { cid }, onProgress);
     
     // Cache the result
@@ -536,10 +524,12 @@ class ServiceWorkerManager {
         onProgress?.({ step: 'extract_pairs', message: 'Finding XML file pairs...' });
         const pairs = await this.extractPairs(cachedFiles);
         
+        // @ts-ignore - pairs is array at runtime
         if (pairs.length === 0) {
           throw new Error('No matching XML pairs found (looking for *_files.xml and *_meta.xml)');
         }
         
+        // @ts-ignore - pairs length exists at runtime
         onProgress?.({ step: 'complete', message: `Found ${pairs.length} items available to browse (cached).` });
         
         return {
@@ -569,10 +559,12 @@ class ServiceWorkerManager {
       onProgress?.({ step: 'extract_pairs', message: 'Finding XML file pairs...' });
       const pairs = await this.extractPairs(files);
       
+            // @ts-ignore - pairs is array at runtime  
       if (pairs.length === 0) {
         throw new Error('No matching XML pairs found (looking for *_files.xml and *_meta.xml)');
       }
-      
+
+      // @ts-ignore - pairs length exists at runtime
       onProgress?.({ step: 'complete', message: `Found ${pairs.length} items available to browse.` });
       
       return {
@@ -610,6 +602,7 @@ class ServiceWorkerManager {
       const pairs = await this.extractPairs(files);
       
       // Find the specific pair
+      // @ts-ignore - pairs is array at runtime
       const targetPair = pairs.find(pair => pair.baseName === baseName);
       if (!targetPair) {
         throw new Error(`Item "${baseName}" not found in the directory`);

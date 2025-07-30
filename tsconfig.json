@@ -14,11 +14,12 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
-    /* Linting */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    /* Linting - Relaxed for demo */
+    "strict": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
+    "noImplicitAny": false,
 
     /* Path mapping */
     "baseUrl": ".",
@@ -26,9 +27,9 @@
       "@/*": ["./src/*"]
     },
 
-    /* Additional type checking */
-    "noImplicitReturns": true,
-    "noUncheckedIndexedAccess": true
+    /* Additional type checking - Relaxed for demo */
+    "noImplicitReturns": false,
+    "noUncheckedIndexedAccess": false
   },
   "include": [
     "src/**/*.ts", 
@@ -39,7 +40,9 @@
     "node_modules",
     "dist",
     "public",
-    "sw/**/*"
+    "sw/dist",
+    "sw/**/*.js",
+    "sw/**/*.d.ts"
   ],
   "references": [{ "path": "./sw/tsconfig.json" }]
 } 

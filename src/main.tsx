@@ -23,13 +23,11 @@ const getBasename = (): string => {
 };
 
 const basename = getBasename();
-console.log('🟢 Environment VITE_BASE_PATH:', import.meta.env.VITE_BASE_PATH);
-console.log('🟢 Using basename:', basename);
 
-// Add global error handlers for better debugging
+// Add global error handlers
 window.addEventListener('error', (event) => {
-  console.error('🔴 Global error:', event.error);
-  console.error('🔴 Error details:', {
+  console.error('Global error:', event.error);
+  console.error('Error details:', {
     message: event.message,
     filename: event.filename,
     lineno: event.lineno,
@@ -39,8 +37,8 @@ window.addEventListener('error', (event) => {
 });
 
 window.addEventListener('unhandledrejection', (event) => {
-  console.error('🔴 Unhandled promise rejection:', event.reason);
-  console.error('🔴 Promise:', event.promise);
+  console.error('Unhandled promise rejection:', event.reason);
+  console.error('Promise:', event.promise);
 });
 
 // React Error Boundary Component
