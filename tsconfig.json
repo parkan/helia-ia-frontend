@@ -39,7 +39,9 @@
     "node_modules",
     "dist",
     "public",
-    "sw/**/*"
+    "sw/dist",
+    "sw/**/*.js",
+    "sw/**/*.d.ts"
   ],
   "references": [{ "path": "./sw/tsconfig.json" }]
 } 
