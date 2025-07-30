@@ -28,7 +28,7 @@ export default function DownloadId() {
   const [viewingVideo, setViewingVideo] = useState(null);
   const [videoLoading, setVideoLoading] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState(null);
-  const [backgroundProgress, setBackgroundProgress] = useState([]);
+
   // No longer need allDirectoryFiles state - using UnixFS path-based access
 
   useEffect(() => {
@@ -232,7 +232,7 @@ export default function DownloadId() {
       
       // Get full directory listing as fallback (or if direct fetch failed)
       setProgress({ step: 'listing', message: 'Getting full directory listing...' });
-      setBackgroundProgress([]); // Reset background progress
+      
       
       // No background processing needed - using UnixFS direct access
       
@@ -522,7 +522,7 @@ export default function DownloadId() {
             {/* Back navigation */}
             <div className="mb-6">
               <button
-                onClick={() => navigate(`/#${cid}`)}
+                onClick={() => navigate(`/?cid=${encodeURIComponent(cid)}`)}
                 className="text-blue-600 hover:text-blue-800 flex items-center gap-2"
               >
                 ← Back to items list
@@ -545,27 +545,7 @@ export default function DownloadId() {
               </div>
             )}
 
-            {backgroundProgress.length > 0 && (
-              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md">
-                <div className="flex items-center space-x-2 mb-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-green-800 font-medium">Background Processing</span>
-                </div>
-                <div className="max-h-32 overflow-y-auto space-y-1">
-                  {backgroundProgress.slice(-5).map((update, idx) => (
-                    <div key={idx} className="text-sm text-green-700">
-                      <span className="text-green-600">[{update.timestamp}]</span> {update.message}
-                      {update.error && <span className="text-red-600 ml-2">Error: {update.error}</span>}
-                    </div>
-                  ))}
-                  {backgroundProgress.length > 5 && (
-                    <div className="text-xs text-green-600 italic">
-                      ...and {backgroundProgress.length - 5} more updates
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+
 
             {error && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">

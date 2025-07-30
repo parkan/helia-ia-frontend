@@ -414,6 +414,49 @@ class ServiceWorkerManager {
   }
 
   /**
+   * Get cached processed results (metadata + thumbnails) from browser storage
+   */
+  getCachedProcessedResults(cid) {
+    try {
+      const cacheKey = `processed_${this.cachePrefix}${cid}`;
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const data = JSON.parse(cached);
+        const now = Date.now();
+        
+        if (data.timestamp && (now - data.timestamp) < (30 * 24 * 60 * 60 * 1000)) { // 30 days
+          console.log(`📦 Using cached processed results for CID: ${cid} (${data.results.processedContent.length} items)`);
+          return data.results;
+        } else {
+          // Expired cache, remove it
+          localStorage.removeItem(cacheKey);
+        }
+      }
+      return null;
+    } catch (error) {
+      console.warn('Failed to read processed results cache:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Store processed results (metadata + thumbnails) in browser storage
+   */
+  setCachedProcessedResults(cid, results) {
+    try {
+      const cacheKey = `processed_${this.cachePrefix}${cid}`;
+      const cacheData = {
+        timestamp: Date.now(),
+        results: results
+      };
+      localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+      console.log(`💾 Cached processed results for CID: ${cid} (${results.processedContent.length} items)`);
+    } catch (error) {
+      console.warn('Failed to cache processed results:', error);
+    }
+  }
+
+  /**
    * Store directory listing in browser storage
    */
   setCachedDirectoryListing(cid, files) {
