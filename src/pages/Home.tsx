@@ -65,8 +65,6 @@ interface ItemThumbnails {
 }
 
 export default function Home(): React.ReactElement {
-  console.log('🟢 Home component rendering');
-  
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [cid, setCid] = useState<string>(''); // The active CID we're viewing
@@ -80,8 +78,7 @@ export default function Home(): React.ReactElement {
 
   const [itemThumbnails, setItemThumbnails] = useState<ItemThumbnails>({}); // Map of baseName -> thumbnail URL
 
-  // Debug logging for state changes
-  console.log(`🔍 HOME DEBUG - CID: "${cid}", Results: ${results ? `${results.processedContent?.length || 0} items` : 'null'}, Loading: ${isLoading}`);
+
 
   // Initialize service worker on mount
   useEffect(() => {
@@ -91,28 +88,20 @@ export default function Home(): React.ReactElement {
   // Simple URL → State sync: When URL changes, update CID
   useEffect(() => {
     const cidFromQuery = searchParams.get('cid') || '';
-    console.log(`🔍 URL SYNC CHECK: URL CID: "${cidFromQuery}", Current CID: "${cid}"`);
     if (cidFromQuery !== cid) {
-      console.log(`🔄 URL SYNC: Setting CID from URL: "${cidFromQuery}"`);
       setCid(cidFromQuery);
     }
-  }, [searchParams]); // Sync URL params to state
+  }, [searchParams]);
 
-  // Simple auto-load: Only load if we don't have data for the current CID
+  // Auto-load data when service worker is ready and CID is set
   useEffect(() => {
-    console.log(`🔍 AUTO-LOAD CHECK: SW Ready: ${isServiceWorkerReady}, CID: "${cid}", Results CID: "${results?.cid || 'none'}", Loading: ${isLoading}`);
-    
     const needsData = isServiceWorkerReady && cid && !isLoading && 
                      (!results || results.cid !== cid);
     
     if (needsData) {
-      console.log(`🔄 AUTO-LOAD: Loading data for CID: ${cid}`);
-      // Call processing directly with current CID instead of going through form validation
       processData(cid);
-    } else {
-      console.log(`⏸️ AUTO-LOAD: Skipping auto-load`);
     }
-  }, [isServiceWorkerReady, cid]); // Load when CID changes or service worker becomes ready
+  }, [isServiceWorkerReady, cid]);
 
   // URL is updated explicitly when form is submitted, not automatically
 
@@ -143,22 +132,16 @@ export default function Home(): React.ReactElement {
 
   // Core data processing function (can be called from form submit or auto-load)
   const processData = async (cidToProcess: string) => {
-    console.log(`🔄 PROCESS DATA: Starting processing for CID: ${cidToProcess}`);
-    
     if (!isServiceWorkerReady) {
       setError('Service Worker not ready. Please wait or refresh the page.');
       return;
     }
 
     // Check if we already have processed content for this CID
-    console.log(`🔍 PROCESS DEBUG - CID: "${cidToProcess}", Results exists: ${!!results}, Processed content: ${results?.processedContent?.length || 0}`);
     if (results && results.processedContent && results.processedContent.length > 0 && results.cid === cidToProcess) {
-      console.log(`🚀 Already have processed content for CID: ${cidToProcess} (${results.processedContent.length} items)`);
-      setProgress({ step: 'complete', message: `✅ Already loaded ${results.processedContent.length} items!` });
+      setProgress({ step: 'complete', message: `Already loaded ${results.processedContent.length} items!` });
       return;
     }
-    
-    console.log(`🔄 PROCESS DEBUG - Proceeding with processing because: Results: ${!!results}, Processed: ${results?.processedContent?.length || 0}`);
 
     setIsLoading(true);
     setError('');
@@ -202,7 +185,6 @@ export default function Home(): React.ReactElement {
       for (let i = 0; i < data.pairs.length; i++) {
         const pair = data.pairs[i];
         try {
-          console.log(`🔄 PROGRESS: Processing item ${i + 1}/${data.pairs.length}: ${pair.baseName}`);
           setProgress({ 
             step: 'fetch_meta', 
             message: `Loading metadata: ${pair.baseName}... (${i + 1}/${data.pairs.length})` 
@@ -229,11 +211,7 @@ export default function Home(): React.ReactElement {
           let thumbnailFile = null;
           
           // Check if we already have a thumbnail for this item
-          if (itemThumbnails[pair.baseName]) {
-            console.log(`🔍 THUMBNAIL SEARCH for ${pair.baseName}: ✅ Already cached, skipping`);
-          } else {
-            console.log(`🔍 THUMBNAIL SEARCH for ${pair.baseName}:`);
-            console.log(`📋 Available files:`, filesInfo.map(f => f.name));
+          if (!itemThumbnails[pair.baseName]) {
           
             // First, look for .thumbs directory files and take the 2nd one (index 1)
             const thumbsFiles = filesInfo.filter(file => 
@@ -242,10 +220,8 @@ export default function Home(): React.ReactElement {
           
           if (thumbsFiles.length >= 2) {
             thumbnailFile = thumbsFiles[1]; // Take 2nd file (index 1)
-            console.log(`🖼️ Found .thumbs directory with ${thumbsFiles.length} files, using 2nd: ${thumbnailFile.name}`);
           } else if (thumbsFiles.length === 1) {
             thumbnailFile = thumbsFiles[0]; // Fallback to 1st if only one
-            console.log(`🖼️ Found .thumbs directory with only 1 file, using: ${thumbnailFile.name}`);
           } else {
             // Fallback: look for other thumbnail patterns
             thumbnailFile = filesInfo.find(file => {
@@ -265,18 +241,11 @@ export default function Home(): React.ReactElement {
               return matches;
             });
             
-            if (thumbnailFile) {
-              console.log(`🖼️ Found fallback thumbnail: ${thumbnailFile.name}`);
-            } else {
-              console.log(`❌ No thumbnail found for ${pair.baseName}`);
-            }
           }
           
             if (thumbnailFile) {
-              console.log(`🖼️ Found thumbnail for ${pair.baseName}: ${thumbnailFile.name}`);
               // Use root CID + path for UnixFS directory access
               const thumbnailUrl = ipfsUrl(`ipfs-sw/${cidToProcess}/${thumbnailFile.name}?filename=${encodeURIComponent(thumbnailFile.name)}`);
-              console.log(`🔗 Setting thumbnail URL for ${pair.baseName}: ${thumbnailUrl}`);
               
               setItemThumbnails(prev => ({
                 ...prev,
@@ -293,20 +262,18 @@ export default function Home(): React.ReactElement {
           };
           
           processedItems.push(newItem);
-          console.log(`✅ PROGRESS: Processed ${processedItems.length} items so far`);
           
-          // 🎯 PROGRESSIVE UPDATE: Update results immediately with new item
+          // Progressive update: Update results immediately with new item
           // Use setTimeout to break out of React batching and force immediate update
           await new Promise<void>(resolve => {
-            setTimeout(() => {
-              // @ts-ignore - Complex Results type update, but this works correctly
-              setResults(prev => ({
-                ...prev,
-                processedContent: [...processedItems] // Update with current items
-              }));
-              console.log(`🔄 PROGRESS: UI updated with ${processedItems.length} items`);
-              resolve();
-            }, 10); // Small delay to force React to flush the update
+                      setTimeout(() => {
+            // @ts-ignore - Complex Results type update, but this works correctly
+            setResults(prev => ({
+              ...prev,
+              processedContent: [...processedItems] // Update with current items
+            }));
+            resolve();
+          }, 10); // Small delay to force React to flush the update
           });
           
         } catch (error) {
@@ -325,23 +292,21 @@ export default function Home(): React.ReactElement {
           };
           
           processedItems.push(fallbackItem);
-          console.log(`⚠️ PROGRESS: Fallback item created for ${pair.baseName}`);
           
-          // 🎯 PROGRESSIVE UPDATE: Update results with fallback item too
+          // Progressive update: Update results with fallback item too
           await new Promise<void>(resolve => {
             setTimeout(() => {
               setResults(prev => ({
                 ...prev,
                 processedContent: [...processedItems]
               }));
-              console.log(`🔄 PROGRESS: UI updated with ${processedItems.length} items (including fallback)`);
               resolve();
             }, 10);
           });
         }
       }
 
-      setProgress({ step: 'complete', message: `✅ All ${processedItems.length} items loaded!` });
+      setProgress({ step: 'complete', message: `All ${processedItems.length} items loaded!` });
 
       // Update cache stats after successful operation
       // @ts-ignore - CacheStats typing is complex but this works
@@ -363,9 +328,7 @@ export default function Home(): React.ReactElement {
     e.preventDefault();
     
     const trimmedInput = inputCid.trim();
-    console.log(`🔍 SUBMIT: Input CID: "${trimmedInput}", Current CID: "${cid}"`);
     if (!trimmedInput) {
-      console.log(`❌ SUBMIT: Empty CID`);
       setError('Please enter a CID');
       return;
     }
@@ -536,9 +499,6 @@ export default function Home(): React.ReactElement {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {results.processedContent.map((item: ProcessedItem, index: number) => {
                       const thumbnailUrl = itemThumbnails[item.baseName];
-                      console.log(`🖼️ Rendering card for ${item.baseName}, thumbnail URL: ${thumbnailUrl}`);
-                      console.log(`🗂️ Available thumbnails:`, Object.keys(itemThumbnails));
-                      console.log(`📄 Item details:`, { baseName: item.baseName, pair: item.pair });
                       return (
                         <div 
                           key={index} 

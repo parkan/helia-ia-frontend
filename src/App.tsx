@@ -7,10 +7,6 @@ function App(): React.ReactElement {
   const location = useLocation();
   const isHomePage = location.pathname === '/';
   
-  console.log('🟢 App component rendering');
-  console.log('🟢 Current pathname:', location.pathname);
-  console.log('🟢 Is home page:', isHomePage);
-  
   try {
     return (
       <>

@@ -68,8 +68,6 @@ export default function DownloadId() {
       console.log('🔧 Download page: Initializing service worker...');
       await serviceWorkerManager.init();
       
-      // Service worker is ready after successful initialization
-      console.log('✅ Download page: Service worker ready');
       setIsServiceWorkerReady(true);
     } catch (error) {
       console.error('Failed to initialize service worker:', error);
@@ -86,7 +84,6 @@ export default function DownloadId() {
       // Check if we have cached directory data first
       const cachedFiles = serviceWorkerManager.getCachedDirectoryListing(cid);
       if (cachedFiles && cachedFiles.length > 0) {
-        console.log(`🎯 Found cached directory data for CID: ${cid} (${cachedFiles.length} files)`);
         setProgress({ step: 'cache_hit', message: 'Using cached directory data...' });
         
         // Use cached data to find and load the specific item
@@ -105,26 +102,13 @@ export default function DownloadId() {
         setProgress({ step: 'retrieve_cached_xml', message: 'Loading XML files from cache info...' });
         
         const [filesXmlContent, metaXmlContent] = await Promise.all([
-          fetch(`./ipfs-sw/${targetPair.filesXml.cid}?filename=${targetPair.filesXml.name}`).then(r => {
-            console.log(`🔍 Files XML fetch response status: ${r.status}`);
-            return r.text();
-          }),
-          fetch(`./ipfs-sw/${targetPair.metaXml.cid}?filename=${targetPair.metaXml.name}`).then(r => {
-            console.log(`🔍 Meta XML fetch response status: ${r.status}`);
-            return r.text();
-          })
+          fetch(`./ipfs-sw/${targetPair.filesXml.cid}?filename=${targetPair.filesXml.name}`).then(r => r.text()),
+          fetch(`./ipfs-sw/${targetPair.metaXml.cid}?filename=${targetPair.metaXml.name}`).then(r => r.text())
         ]);
-        
-        console.log(`📄 Files XML content length: ${filesXmlContent.length}`);
-        console.log(`📄 Meta XML content length: ${metaXmlContent.length}`);
-        console.log(`📄 Files XML preview: ${filesXmlContent.substring(0, 200)}...`);
-        console.log(`📄 Meta XML preview: ${metaXmlContent.substring(0, 200)}...`);
         
         // Process the XML content
         setProgress({ step: 'process_xml', message: 'Processing XML content...' });
         const processedPair = processXmlPair(filesXmlContent, metaXmlContent);
-        
-        console.log(`🔍 Processed pair result: ${processedPair.files.length} files found`);
         
         // Correlate XML file data with cached directory listing to get proper CIDs
         const filesWithCids = processedPair.files.map(file => {
@@ -159,8 +143,6 @@ export default function DownloadId() {
       
       // If no cache hit, try direct XML fetch
       try {
-        console.log(`🚀 Attempting direct XML fetch for ${baseName} in CID: ${cid}`);
-        
         // Construct the direct XML file paths
               const metaXmlUrl = ipfsUrl(`ipfs-sw/${cid}/${baseName}_meta.xml`);
       const filesXmlUrl = ipfsUrl(`ipfs-sw/${cid}/${baseName}_files.xml`);
@@ -186,8 +168,6 @@ export default function DownloadId() {
           metaResponse.text(),
           filesResponse.text()
         ]);
-        
-        console.log(`✅ Successfully fetched XML files directly for ${baseName}`);
         
         // Process the XML content
         setProgress({ step: 'process_xml', message: 'Processing XML content...' });
@@ -215,7 +195,6 @@ export default function DownloadId() {
         // No background processing needed - using UnixFS direct access
         
         // Trigger background subdirectory processing in direct fetch mode
-        console.log(`🔄 Starting background subdirectory processing for CID: ${cid}`);
         // @ts-ignore - background processing method exists
         serviceWorkerManager.processSubdirectoriesInBackground(cid);
         
