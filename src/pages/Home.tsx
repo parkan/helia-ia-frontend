@@ -373,6 +373,9 @@ export default function Home(): React.ReactElement {
     if (trimmedInput !== cid) {
       setCid(trimmedInput);
       setSearchParams({ cid: trimmedInput }); // Explicitly update URL
+      // Clear old results when changing to a new root CID
+      setResults(null);
+      setItemThumbnails({});
       // This will trigger the auto-load effect to process the new CID
       return;
     }
