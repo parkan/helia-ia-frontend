@@ -6,7 +6,7 @@ import DownloadId from './pages/DownloadId';
 function App(): React.ReactElement {
   const location = useLocation();
   const isHomePage = location.pathname === '/';
-  
+
   try {
     return (
       <>

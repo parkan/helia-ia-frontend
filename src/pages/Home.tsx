@@ -141,10 +141,9 @@ export default function Home(): React.ReactElement {
 
 
 
-  // Initialize service worker on mount
   useEffect(() => {
-    initializeServiceWorker();
-  }, []); // Only run once on mount
+    setIsServiceWorkerReady(serviceWorkerManager.ready);
+  }, []);
 
   // Simple URL → State sync: When URL changes, update CID
   useEffect(() => {
@@ -176,20 +175,7 @@ export default function Home(): React.ReactElement {
     setInputCid(cid);
   }, [cid]);
 
-  const initializeServiceWorker = async () => {
-    try {
-      // @ts-ignore - isSupported method exists at runtime
-      if (!serviceWorkerManager.constructor.isSupported()) {
-        throw new Error('Service Worker not supported in this browser');
-      }
 
-      await serviceWorkerManager.init();
-      setIsServiceWorkerReady(true);
-    } catch (error) {
-      console.error('Failed to initialize service worker:', error);
-      setError(`Service Worker initialization failed: ${error.message}`);
-    }
-  };
 
   // Core data processing function (can be called from form submit or auto-load)
   const processData = async (cidToProcess: string) => {
@@ -475,7 +461,7 @@ export default function Home(): React.ReactElement {
     navigate(`/download/${encodeURIComponent(baseName)}?cid=${encodeURIComponent(cid)}`);
   };
 
-  console.log('🟢 Home component about to return JSX');
+
 
   return (
     <div className="min-h-screen">

@@ -70,7 +70,7 @@ export default function DownloadId() {
   };
 
   useEffect(() => {
-    initializeServiceWorker();
+    setIsServiceWorkerReady(serviceWorkerManager.ready);
   }, []);
 
   useEffect(() => {
@@ -96,22 +96,7 @@ export default function DownloadId() {
     document.title = downloadData?.metadata?.title || `${baseName} - View & Download`;
   }, [downloadData, baseName]);
 
-  const initializeServiceWorker = async () => {
-    try {
-      // @ts-ignore - isSupported method exists at runtime
-      if (!serviceWorkerManager.constructor.isSupported()) {
-        throw new Error('Service Worker not supported in this browser');
-      }
 
-      console.log('🔧 Download page: Initializing service worker...');
-      await serviceWorkerManager.init();
-      
-      setIsServiceWorkerReady(true);
-    } catch (error) {
-      console.error('Failed to initialize service worker:', error);
-      setError(`Service Worker initialization failed: ${error.message}`);
-    }
-  };
 
   const loadDownloadData = async () => {
     setIsLoading(true);
@@ -188,7 +173,7 @@ export default function DownloadId() {
               const metaXmlUrl = ipfsUrl(`ipfs-sw/${cid}/${baseName}_meta.xml`);
       const filesXmlUrl = ipfsUrl(`ipfs-sw/${cid}/${baseName}_files.xml`);
         
-        console.log(`📥 Fetching XML files directly:`, { metaXmlUrl, filesXmlUrl });
+
         
         // Fetch both XML files directly
         const [metaResponse, filesResponse] = await Promise.all([

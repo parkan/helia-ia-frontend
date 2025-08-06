@@ -53,6 +53,7 @@ class ServiceWorkerManager {
   private messageHandlerSet: boolean = false;
   private cachePrefix: string = 'helia_directory_';
   private backgroundProgressCallbacks: Set<ProgressCallback> = new Set();
+  private initPromise: Promise<ServiceWorkerRegistration> | null = null;
   
   // Cache configuration: IndexedDB handles blocks, LocalStorage handles processed directories
 
@@ -69,13 +70,23 @@ class ServiceWorkerManager {
       throw new Error('Service Worker not supported in this browser');
     }
 
-    // Skip if already initialized
-    if (this.isInitialized) {
+    // If already initialized, return the existing registration
+    if (this.isInitialized && this.registration) {
       return this.registration;
     }
 
+          // If initialization is in progress, wait for it
+      if (this.initPromise) {
+        return this.initPromise;
+      }
+
+    // Create and store the initialization promise
+    this.initPromise = this.performInit();
+    return this.initPromise;
+  }
+
+  private async performInit(): Promise<ServiceWorkerRegistration> {
     try {
-      console.log('Initializing service worker...');
       
       // Register service worker
       const baseUrl = import.meta.env.BASE_URL || '/';
@@ -90,6 +101,35 @@ class ServiceWorkerManager {
       // Wait for service worker to be ready and active
       await navigator.serviceWorker.ready;
       
+              // Wait for controller to be available to prevent race condition
+        if (!navigator.serviceWorker.controller) {
+        await new Promise<void>((resolve) => {
+          const onControllerChange = () => {
+            if (navigator.serviceWorker.controller) {
+              navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+              resolve();
+            }
+          };
+          navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+          
+          // Also check every 100ms in case event was missed
+          const checkInterval = setInterval(() => {
+            if (navigator.serviceWorker.controller) {
+              clearInterval(checkInterval);
+              navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+              resolve();
+            }
+          }, 100);
+          
+                      // Timeout after 3 seconds
+            setTimeout(() => {
+              clearInterval(checkInterval);
+              navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+              resolve(); // Continue anyway
+            }, 3000);
+        });
+      }
+      
       // Set up message handler
       if (!this.messageHandlerSet) {
         navigator.serviceWorker.addEventListener('message', this.handleMessage.bind(this));
@@ -100,16 +140,29 @@ class ServiceWorkerManager {
       this.worker = navigator.serviceWorker.controller || this.registration.active;
       this.isInitialized = true;
       
-      console.log('Service Worker initialized successfully');
-      return this.registration;
+
+      return this.registration!;
       
     } catch (error) {
       console.error('Service Worker registration failed:', error);
+      this.initPromise = null; // Reset on error so we can try again
       throw error;
+    } finally {
+      // Clear the promise when done (success or failure)
+      if (this.isInitialized) {
+        this.initPromise = null;
+      }
     }
   }
 
 
+
+  /**
+   * Check if service worker is initialized and ready
+   */
+  get ready(): boolean {
+    return this.isInitialized;
+  }
 
   /**
    * Handle messages from service worker

@@ -1,10 +1,11 @@
-console.log('🟢 main.tsx module loaded');
+
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import './styles/globals.css';
+import { serviceWorkerManager } from './serviceWorkerManager';
 
 // Determine the base path for React Router from build environment
 // Can be set via VITE_BASE_PATH environment variable during build
@@ -23,6 +24,14 @@ const getBasename = (): string => {
 };
 
 const basename = getBasename();
+
+// Initialize service worker at application bootstrap
+const serviceWorkerReady = serviceWorkerManager.init()
+  .then(() => true)
+  .catch((error) => {
+    console.error('Service worker failed to initialize:', error);
+    return false;
+  });
 
 // Add global error handlers
 window.addEventListener('error', (event) => {
@@ -89,21 +98,23 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 }
 
-console.log('🟢 All imports successful, mounting React...');
+// Wait for service worker before starting React
+serviceWorkerReady.then(() => {
 
-const rootElement = document.getElementById('root');
-if (!rootElement) {
-  throw new Error('Root element not found');
-}
+  const rootElement = document.getElementById('root');
+  if (!rootElement) {
+    throw new Error('Root element not found');
+  }
 
-ReactDOM.createRoot(rootElement).render(
-  <React.StrictMode>
-    <ErrorBoundary>
-      <BrowserRouter basename={basename}>
-        <App />
-      </BrowserRouter>
-    </ErrorBoundary>
-  </React.StrictMode>
-);
+  ReactDOM.createRoot(rootElement).render(
+    <React.StrictMode>
+      <ErrorBoundary>
+        <BrowserRouter basename={basename}>
+          <App />
+        </BrowserRouter>
+      </ErrorBoundary>
+    </React.StrictMode>
+  );
 
-console.log('🟢 React.createRoot called'); 
+
+}); 
