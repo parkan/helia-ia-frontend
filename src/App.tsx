@@ -10,12 +10,10 @@ function App(): React.ReactElement {
   try {
     return (
       <>
-        {/* Always render Home component, but hide when not on home route */}
-        <div style={{ display: isHomePage ? 'block' : 'none' }}>
-          <Home />
-        </div>
+        {/* Only mount Home component when on home page */}
+        {isHomePage && <Home />}
         
-        {/* Render download routes only when not on home page */}
+        {/* Render download routes when not on home page */}
         {!isHomePage && (
           <Routes>
             <Route path="/download/:id" element={<DownloadId />} />
