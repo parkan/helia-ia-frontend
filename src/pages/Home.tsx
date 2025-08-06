@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { serviceWorkerManager } from '../serviceWorkerManager';
-import { parseXML, extractMetadata, extractFilesInfo } from '../xmlParser';
+import { processXmlPair } from '../xmlParser';
 // @ts-ignore - ipfsUrl.js doesn't have types but works fine
 import { ipfsUrl } from '../utils/ipfsUrl';
 
@@ -29,7 +29,7 @@ interface ProcessedItem {
   metadata: any;
   pair: any;
   error?: string;
-  filesInfo?: any[];
+  files?: any[];        // Standardized files property (from processXmlPair)
 }
 
 type ItemCategory = 'Videos' | 'Documents' | 'Photos' | 'Other';
@@ -91,8 +91,8 @@ export default function Home(): React.ReactElement {
 
   // Categorization function - determines item category based on file types
   const categorizeItem = (item: ProcessedItem): ItemCategory => {
-    // Extract files from the item's filesInfo (from XML parsing) or pair data as fallback
-    const files = item.filesInfo || item.pair?.files || [];
+    // Extract files from the item's files (standardized) or pair data as fallback
+    const files = item.files || item.pair?.files || [];
     
     // Check for video formats (common video extensions)
     const hasVideo = files.some((file: any) => {
@@ -260,13 +260,9 @@ export default function Home(): React.ReactElement {
           const metaXmlContent = await metaResponse.text();
           const filesXmlContent = await filesResponse.text();
           
-          // Parse metadata
-          const parsedMeta = parseXML(metaXmlContent);
-          const metadata = extractMetadata(parsedMeta);
-          
-          // Parse files and look for thumbnails
-          const parsedFiles = parseXML(filesXmlContent);
-          const filesInfo = extractFilesInfo(parsedFiles);
+          // Process XML files using unified approach
+          const processedPair = processXmlPair(filesXmlContent, metaXmlContent);
+          const { metadata, files: filesInfo } = processedPair;
           
           // Look for thumbnail files (avoiding __ia_thumb*.jpg which get clobbered in merged items)
           let thumbnailFile = null;
@@ -320,8 +316,8 @@ export default function Home(): React.ReactElement {
             metadata: metadata,
             // Store the pair info for later use on detail page
             pair: pair,
-            // Store files info for categorization
-            filesInfo: filesInfo
+            // Store files info for categorization (standardized 'files' property)
+            files: filesInfo
           };
           
           processedItems.push(newItem);
