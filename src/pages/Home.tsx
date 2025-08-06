@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { serviceWorkerManager } from '../serviceWorkerManager';
 import { parseXML, extractMetadata, extractFilesInfo } from '../xmlParser';
 // @ts-ignore - ipfsUrl.js doesn't have types but works fine
@@ -77,6 +77,8 @@ interface ItemThumbnails {
 export default function Home(): React.ReactElement {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const isVisible = location.pathname === '/';
   const [cid, setCid] = useState<string>(''); // The active CID we're viewing
   const [inputCid, setInputCid] = useState<string>(''); // The CID in the input field
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -154,15 +156,15 @@ export default function Home(): React.ReactElement {
     }
   }, [searchParams]);
 
-  // Auto-load data when service worker is ready and CID is set
+  // Auto-load data when service worker is ready and CID is set (only when Home is visible)
   useEffect(() => {
-    const needsData = isServiceWorkerReady && cid && !isLoading && 
+    const needsData = isVisible && isServiceWorkerReady && cid && !isLoading && 
                      (!results || results.cid !== cid);
     
     if (needsData) {
       processData(cid);
     }
-  }, [isServiceWorkerReady, cid]);
+  }, [isServiceWorkerReady, cid, isVisible]);
 
   // URL is updated explicitly when form is submitted, not automatically
 

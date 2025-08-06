@@ -238,11 +238,7 @@ export default function DownloadId() {
         
         console.log(`📚 Loaded ${processedPair.files.length} files for ${baseName} (direct fetch mode)`);
         
-        // No background processing needed - using UnixFS direct access
-        
-        // Trigger background subdirectory processing in direct fetch mode
-        // @ts-ignore - background processing method exists
-        serviceWorkerManager.processSubdirectoriesInBackground(cid);
+        // No background processing needed - using UnixFS direct access for single item view
         
         setProgress({ step: 'complete', message: 'Item loaded!' });
         
@@ -254,64 +250,9 @@ export default function DownloadId() {
         return; // Exit after direct fetch
         
       } catch (directFetchError) {
-        console.log(`📥 Direct fetch failed: ${directFetchError.message}, falling back to full directory listing...`);
-        // Continue to full directory fetch if direct fetch fails
+        console.error(`📥 Direct fetch failed for ${baseName}:`, directFetchError.message);
+        throw new Error(`Item not found: ${baseName}. The XML metadata files for this item may not exist in the IPFS directory.`);
       }
-      
-      // Get full directory listing as fallback (or if direct fetch failed)
-      setProgress({ step: 'listing', message: 'Getting full directory listing...' });
-      
-      
-      // No background processing needed - using UnixFS direct access
-      
-      const directoryData = await serviceWorkerManager.getItemListing(cid, (progressData) => {
-        if (progressData.step === 'directory_listing') {
-          setProgress({ 
-            step: 'directory_listing', 
-            message: progressData.message,
-            // @ts-ignore - entriesFound exists at runtime
-            entriesFound: progressData.entriesFound,
-            // @ts-ignore - stage exists at runtime  
-            stage: progressData.stage
-          });
-        } else {
-          setProgress(progressData);
-        }
-      });
-      
-      // No longer need to track directory files - using UnixFS direct access
-      
-      // Then fetch the specific item's XML files
-      const itemData = await serviceWorkerManager.getSpecificItem(cid, baseName, setProgress);
-      
-      // Process the XML content for this specific item
-      const processedPair = processXmlPair(
-        itemData.filesXml.content,
-        itemData.metaXml.content
-      );
-
-      // Correlate XML file data with directory listing to get CIDs (use directoryData.originalFiles for initial correlation)
-      const filesWithCids = processedPair.files.map(file => {
-        const directoryFile = directoryData.originalFiles.find(df => df.name === file.name);
-        return {
-          ...file,
-          cid: directoryFile?.cid || null,
-          path: directoryFile?.path || file.name
-        };
-      });
-
-      setDownloadData({
-        baseName,
-        ...processedPair,
-        files: filesWithCids,
-        rawXml: {
-          filesXml: itemData.filesXml.content,
-          metaXml: itemData.metaXml.content
-        }
-      });
-
-      // Find and set thumbnail
-      findAndSetThumbnail(filesWithCids);
 
     } catch (error) {
       console.error('Error loading download:', error);
