@@ -28,8 +28,46 @@ export default function DownloadId() {
   const [viewingVideo, setViewingVideo] = useState(null);
   const [videoLoading, setVideoLoading] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState(null);
+  const [thumbnailUrl, setThumbnailUrl] = useState(null);
 
   // No longer need allDirectoryFiles state - using UnixFS path-based access
+
+  // Helper function to find and set thumbnail
+  const findAndSetThumbnail = (files) => {
+    // Look for thumbnail files (avoiding __ia_thumb*.jpg which get clobbered in merged items)
+    let thumbnailFile = null;
+    
+    // First, look for .thumbs directory files and take the 2nd one (index 1)
+    const thumbsFiles = files.filter(file => 
+      file.name && file.name.includes('.thumbs/') && file.name.includes('.jpg')
+    ).sort((a, b) => a.name.localeCompare(b.name)); // Sort to ensure consistent order
+    
+    if (thumbsFiles.length >= 2) {
+      thumbnailFile = thumbsFiles[1]; // Take 2nd file (index 1)
+    } else if (thumbsFiles.length === 1) {
+      thumbnailFile = thumbsFiles[0]; // Fallback to 1st if only one
+    } else {
+      // Fallback: look for other thumbnail patterns
+      const fallbackThumbs = files.filter(file => {
+        const name = file.name?.toLowerCase() || '';
+        // Avoid problematic __ia_thumb files but allow other thumb patterns
+        if (name.includes('__ia_thumb')) return false;
+        
+        const matches = name.includes('thumb') && name.includes('.jpg');
+        return matches;
+      });
+      
+      if (fallbackThumbs.length > 0) {
+        thumbnailFile = fallbackThumbs[0];
+      }
+    }
+    
+    if (thumbnailFile) {
+      // Use root CID + path for UnixFS directory access
+      const thumbnailUrl = ipfsUrl(`ipfs-sw/${cid}/${thumbnailFile.name}?filename=${encodeURIComponent(thumbnailFile.name)}`);
+      setThumbnailUrl(thumbnailUrl);
+    }
+  };
 
   useEffect(() => {
     initializeServiceWorker();
@@ -130,6 +168,9 @@ export default function DownloadId() {
           }
         });
         
+        // Find and set thumbnail
+        findAndSetThumbnail(filesWithCids);
+        
         setProgress({ step: 'complete', message: 'Item loaded from cache!' });
         // No longer setting allDirectoryFiles - using UnixFS direct access
         
@@ -175,20 +216,25 @@ export default function DownloadId() {
         
         // For direct fetch, construct CIDs as ${root_cid}/${file_name}
         // This allows viewing and downloading files without full directory listing
+        const filesWithPaths = processedPair.files.map(file => ({
+          ...file,
+          cid: `${cid}/${file.name}`, // Construct path-based CID
+          path: file.name
+        }));
+        
         setDownloadData({
           baseName,
           ...processedPair,
-          files: processedPair.files.map(file => ({
-            ...file,
-            cid: `${cid}/${file.name}`, // Construct path-based CID
-            path: file.name
-          })),
+          files: filesWithPaths,
           rawXml: {
             filesXml: filesXmlContent,
             metaXml: metaXmlContent
           },
           directFetch: true // Flag to indicate this was a direct fetch
         });
+        
+        // Find and set thumbnail
+        findAndSetThumbnail(filesWithPaths);
         
         console.log(`📚 Loaded ${processedPair.files.length} files for ${baseName} (direct fetch mode)`);
         
@@ -263,6 +309,9 @@ export default function DownloadId() {
           metaXml: itemData.metaXml.content
         }
       });
+
+      // Find and set thumbnail
+      findAndSetThumbnail(filesWithCids);
 
     } catch (error) {
       console.error('Error loading download:', error);
@@ -548,19 +597,40 @@ export default function DownloadId() {
               <>
                 {/* Item Metadata */}
                 <div className="mb-8">
-                  <h1 className="text-3xl font-bold mb-4" style={{color: 'var(--archive-text)'}}>
-                    {downloadData.metadata.title}
-                  </h1>
-                  {downloadData.metadata.creator && (
-                    <p className="archive-metadata mb-2">
-                      by <span className="font-medium">{downloadData.metadata.creator}</span>
-                    </p>
-                  )}
-                  {downloadData.metadata.date && (
-                    <p className="archive-metadata mb-2">
-                      Published: {downloadData.metadata.date}
-                    </p>
-                  )}
+                  <div className="flex items-start space-x-4">
+                    <div className="flex-1">
+                      <h1 className="text-3xl font-bold mb-4" style={{color: 'var(--archive-text)'}}>
+                        {downloadData.metadata.title}
+                      </h1>
+                      {downloadData.metadata.creator && (
+                        <p className="archive-metadata mb-2">
+                          by <span className="font-medium">{downloadData.metadata.creator}</span>
+                        </p>
+                      )}
+                      {downloadData.metadata.date && (
+                        <p className="archive-metadata mb-2">
+                          Published: {downloadData.metadata.date}
+                        </p>
+                      )}
+                    </div>
+                    
+                    {/* Small thumbnail */}
+                    {thumbnailUrl && (
+                      <div className="flex-shrink-0">
+                        <img 
+                          src={thumbnailUrl} 
+                          alt={`Thumbnail for ${downloadData.metadata.title}`}
+                          className="w-24 h-24 object-cover rounded border border-gray-200 shadow-sm"
+                          onError={(e) => {
+                            // Hide thumbnail if it fails to load
+                            // @ts-ignore - event target properties exist
+                            e.target.style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  
                   {downloadData.metadata.description && (
                     <div className="mt-4 p-4 bg-gray-50 rounded-md">
                       <p className="text-gray-700">{downloadData.metadata.description}</p>
