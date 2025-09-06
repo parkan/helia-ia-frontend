@@ -1,6 +1,7 @@
 {
     "name": "helia-frontend",
-    "image": "mcr.microsoft.com/devcontainers/javascript-node:24",
+    "image": "node:24-slim",
+    "runArgs": ["--userns=keep-id"],
     "customizations": {
         "vscode": {
             "extensions": [
@@ -15,16 +16,17 @@
         }
     },
     "features": {
-        "ghcr.io/devcontainers/features/node:1": {
-            "version": "24"
+        "ghcr.io/devcontainers/features/common-utils:2": {
+            "username": "node",
+            "userUid": "1000",
+            "userGid": "1000"
         },
         "ghcr.io/devcontainers/features/git:1": {}
     },
     "forwardPorts": [3000],
     "portsAttributes": {
         "3000": {
-            "label": "Frontend Dev Server",
-            "onAutoForward": "openPreview"
+            "label": "Frontend Dev Server"
         }
     },
     "postCreateCommand": "npm install",
@@ -35,4 +37,5 @@
         "NODE_ENV": "development"
     },
     "containerUser": "node"
-} 
+}
+
