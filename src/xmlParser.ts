@@ -1,38 +1,8 @@
 // XML Parser utility functions
-import { XMLParser } from 'fast-xml-parser';
+import { createXMLParser, parseXML as sharedParseXML } from '../utils/sharedXmlParser';
 
-// Configure XML parser options
-const parserOptions = {
-  ignoreAttributes: false,
-  attributeNamePrefix: '@_',
-  textNodeName: '#text',
-  parseAttributeValue: true,
-  trimValues: true,
-  parseTrueNumberOnly: false,
-  arrayMode: false,
-  parseTagValue: true,
-  ignoreNameSpace: false,
-  removeNSPrefix: false,
-  allowBooleanAttributes: true,
-  parseNodeValue: true,
-  ignoreDeclaration: false,
-  ignorePiTags: false,
-  transformTagName: false,
-  transformAttributeName: false,
-  processEntities: true,
-  htmlEntities: false,
-  ignoreRootElement: false,
-  cdataTagName: '__cdata',
-  cdataPositionChar: '\\c',
-  preserveOrder: false,
-  commentPropName: '__comment',
-  unpairedTags: [],
-  stopNodes: [],
-  alwaysCreateTextNode: false
-};
-
-// @ts-ignore - XML Parser config compatibility for demo
-const parser = new XMLParser(parserOptions);
+// Use shared parser instance
+const parser = createXMLParser();
 
 /**
  * Parse XML content and return JavaScript object
@@ -41,8 +11,7 @@ const parser = new XMLParser(parserOptions);
  */
 export function parseXML(xmlContent) {
   try {
-    const result = parser.parse(xmlContent);
-    return result;
+    return sharedParseXML(xmlContent);
   } catch (error) {
     console.error('XML parsing error:', error);
     throw new Error(`Failed to parse XML: ${error.message}`);

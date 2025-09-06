@@ -3,10 +3,9 @@
 import { createHeliaHTTP } from '@helia/http';
 import { unixfs } from '@helia/unixfs';
 import { CID } from 'multiformats/cid';
-import { trustlessGateway } from '@helia/block-brokers';
-import { httpGatewayRouting, delegatedHTTPRouting } from '@helia/routers';
 import { createVerifiedFetch } from '@helia/verified-fetch';
 import { IDBBlockstore } from 'blockstore-idb';
+import { getHeliaConfig, HELIA_INIT_TIMEOUT, INIT_PROGRESS_INTERVAL } from '../utils/heliaConfig';
 import type { Helia } from '@helia/interface';
 import type { UnixFS } from '@helia/unixfs';
 
@@ -95,32 +94,12 @@ async function doInitialization(): Promise<{ helia: Helia; fs: UnixFS; verifiedF
     await blockstore.open();
     
     console.log('📋 Creating Helia HTTP configuration...');
-    const config = {
-      // Use IndexedDB blockstore for persistent storage
-      blockstore,
-      // Configure block brokers - trustlessGateway without parameters
-      blockBrokers: [
-        trustlessGateway()
-      ],
-      // Configure routers with custom gateways
-      routers: [
-        //delegatedHTTPRouting('http://delegated-ipfs.dev'),
-        httpGatewayRouting({
-          gateways: [
-            'https://ia.dcentnetworks.nl',
-            //'https://trustless-gateway.link',
-            //'https://blocks.ipfs.io',
-            //'https://dweb.link'
-          ]
-        })
-      ]
-      // No complex libp2p configuration needed with @helia/http
-    };
+    const config = getHeliaConfig(blockstore);
     
     console.log('⚙️ Configuration created, calling createHeliaHTTP() with 8s timeout...');
     
     // Create a more robust timeout mechanism
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: number;
     let isResolved = false;
     
     const heliaPromise = createHeliaHTTP(config).then(result => {
@@ -138,11 +117,11 @@ async function doInitialization(): Promise<{ helia: Helia; fs: UnixFS; verifiedF
     const timeoutPromise = new Promise<never>((_, reject) => {
       timeoutId = setTimeout(() => {
         if (!isResolved) {
-          console.error('🚨 TIMEOUT: Helia initialization timeout reached after 30 seconds');
+          console.error(`🚨 TIMEOUT: Helia initialization timeout reached after ${HELIA_INIT_TIMEOUT / 1000} seconds`);
           console.error('🚨 This indicates createHelia() is hanging - likely gateway connection issues');
-          reject(new Error('Helia initialization timed out after 30 seconds. Gateway connection may be blocked or slow.'));
+          reject(new Error(`Helia initialization timed out after ${HELIA_INIT_TIMEOUT / 1000} seconds. Gateway connection may be blocked or slow.`));
         }
-      }, 30000);
+      }, HELIA_INIT_TIMEOUT);
     });
     
     console.log('🏁 Starting createHelia() race condition...');
@@ -152,7 +131,7 @@ async function doInitialization(): Promise<{ helia: Helia; fs: UnixFS; verifiedF
       if (!isResolved) {
         console.log('⏳ Still waiting for createHelia() to complete...');
       }
-    }, 2000);
+    }, INIT_PROGRESS_INTERVAL);
     
     try {
       helia = await Promise.race([heliaPromise, timeoutPromise]);
