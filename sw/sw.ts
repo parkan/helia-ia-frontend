@@ -107,8 +107,8 @@ async function doInitialization(): Promise<{ helia: Helia; fs: UnixFS; verifiedF
         //delegatedHTTPRouting('http://delegated-ipfs.dev'),
         httpGatewayRouting({
           gateways: [
-            'https://ia.dcentnetworks.nl',
-            //'https://trustless-gateway.link',
+            //'https://ia.dcentnetworks.nl',
+            'https://trustless-gateway.link',
             //'https://blocks.ipfs.io',
             //'https://dweb.link'
           ]
