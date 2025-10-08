@@ -7,11 +7,14 @@ import { createVerifiedFetch } from '@helia/verified-fetch';
 import { IDBBlockstore } from 'blockstore-idb';
 import { trustlessGateway } from '@helia/block-brokers';
 import { httpGatewayRouting } from '@helia/routers';
-import { getHeliaConfig, HELIA_INIT_TIMEOUT, INIT_PROGRESS_INTERVAL } from '../utils/heliaConfig';
 import type { Helia } from '@helia/interface';
 import type { UnixFS } from '@helia/unixfs';
 
 console.log('Helia Service Worker loading...');
+
+// Helia initialization configuration
+const HELIA_INIT_TIMEOUT = 30000; // 30 seconds
+const INIT_PROGRESS_INTERVAL = 2000; // 2 seconds
 
 let helia: Helia | null = null;
 let fs: UnixFS | null = null;
