@@ -88,10 +88,14 @@ class ServiceWorkerManager {
   private async performInit(): Promise<ServiceWorkerRegistration> {
     try {
       
-      // Register service worker
+      // Register service worker with git hash for cache busting
       const baseUrl = import.meta.env.BASE_URL || '/';
       const base = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
-      const swUrl = `${base}sw.js`;
+      // Add git commit hash to force SW update on new deployments
+      // Uses Vite's __GIT_HASH__ injected at build time
+      // @ts-ignore - __GIT_HASH__ is defined at build time by Vite
+      const gitHash = typeof __GIT_HASH__ !== 'undefined' ? __GIT_HASH__ : 'dev';
+      const swUrl = `${base}sw.js?v=${gitHash}`;
       
       this.registration = await navigator.serviceWorker.register(swUrl, {
         scope: base,

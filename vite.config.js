@@ -2,6 +2,16 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import { fileURLToPath, URL } from 'node:url';
+import { execSync } from 'child_process';
+
+// Get git commit hash for cache busting
+const getGitHash = () => {
+  try {
+    return execSync('git rev-parse --short HEAD').toString().trim();
+  } catch (e) {
+    return Date.now().toString();
+  }
+};
 
 export default defineConfig(() => ({
   // Use VITE_BASE_PATH if provided, otherwise empty string for relative paths
@@ -61,5 +71,10 @@ export default defineConfig(() => ({
         global: 'globalThis',
       },
     },
+  },
+  
+  define: {
+    // Inject git hash for service worker cache busting
+    __GIT_HASH__: JSON.stringify(getGitHash()),
   }
 })); 
