@@ -23,7 +23,7 @@ const buildOptions = {
   format: 'esm', // Use ES modules for modern service workers
   target: 'es2022', // Modern target with EventTarget support
   platform: 'browser',
-  sourcemap: !isProduction,
+  sourcemap: true,  // Always generate sourcemaps for debugging
   minify: isProduction,
   // Production optimizations
   ...(isProduction && {

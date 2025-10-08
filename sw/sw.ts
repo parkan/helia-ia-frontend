@@ -100,11 +100,16 @@ async function doInitialization(): Promise<{ helia: Helia; fs: UnixFS; verifiedF
     await blockstore.open();
     
     console.log('📋 Creating Helia HTTP configuration...');
+    // Create DNS resolver and force it to be retained by using it in a way that can't be tree-shaken
+    const dnsResolver = dns();
+    // Force bundler to keep this by adding a side-effect
+    if (!dnsResolver) throw new Error('DNS resolver creation failed');
+    
     const config = {
       // Use IndexedDB blockstore for persistent storage
       blockstore,
-      // DNS resolver for browser environment
-      dns: dns(),
+      // DNS resolver for browser environment - REQUIRED for libp2p components
+      dns: dnsResolver,
       // Configure block brokers - trustlessGateway without parameters
       blockBrokers: [
         trustlessGateway()
