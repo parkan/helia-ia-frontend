@@ -24,15 +24,14 @@ const buildOptions = {
   target: 'es2022', // Modern target with EventTarget support
   platform: 'browser',
   sourcemap: true,  // Always generate sourcemaps for debugging
-  minify: isProduction,
-  // Production optimizations
+  minify: false,  // Disable minification to see actual variable names in errors
+  // Production optimizations (minimal to preserve readability)
   ...(isProduction && {
     treeShaking: true,
     drop: ['debugger'], // Keep console.log for debugging, drop debugger only
     legalComments: 'none',
-    mangleProps: /^_/,
-    ignoreAnnotations: true, // Ignore pure annotations to enable more aggressive tree shaking
-    keepNames: false, // Don't preserve function/class names
+    // Don't mangle anything - we want readable error messages
+    keepNames: true, // Preserve function/class names for debugging
   }),
   define: {
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
