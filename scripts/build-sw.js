@@ -24,7 +24,7 @@ const buildOptions = {
   target: 'es2022', // Modern target with EventTarget support
   platform: 'browser',
   sourcemap: true,  // Always generate sourcemaps for debugging
-  minify: isProduction,
+  minify: false,  // Disabled - minifier is breaking libp2p initialization
   // Production optimizations
   ...(isProduction && {
     treeShaking: true,
