@@ -94,7 +94,27 @@ async function doInitialization(): Promise<{ helia: Helia; fs: UnixFS; verifiedF
     await blockstore.open();
     
     console.log('📋 Creating Helia HTTP configuration...');
-    const config = getHeliaConfig(blockstore);
+    const config = {
+      // Use IndexedDB blockstore for persistent storage
+      blockstore,
+      // Configure block brokers - trustlessGateway without parameters
+      blockBrokers: [
+        trustlessGateway()
+      ],
+      // Configure routers with custom gateways
+      routers: [
+        //delegatedHTTPRouting('http://delegated-ipfs.dev'),
+        httpGatewayRouting({
+          gateways: [
+            'https://ia.dcentnetworks.nl',
+            //https://trustless-gateway.link',
+            //'https://blocks.ipfs.io',
+            //'https://dweb.link'
+          ]
+        })
+      ]
+      // No complex libp2p configuration needed with @helia/http
+    };
     
     console.log('⚙️ Configuration created, calling createHeliaHTTP() with 8s timeout...');
     
