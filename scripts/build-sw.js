@@ -25,15 +25,14 @@ const buildOptions = {
   platform: 'browser',
   sourcemap: true,  // Always generate sourcemaps for debugging
   minify: false,  // Disabled - minifier is breaking libp2p initialization
-  // Production optimizations
-  ...(isProduction && {
-    treeShaking: true,
-    drop: ['debugger'], // Keep console.log for debugging, drop debugger only
-    legalComments: 'none',
-    mangleProps: /^_/,
-    // KEEP ignoreAnnotations: false (default) - aggressive tree-shaking breaks libp2p
-    keepNames: false, // Don't preserve function/class names
-  }),
+  // NO production optimizations - debugging compatibility issues
+  // ...(isProduction && {
+  //   treeShaking: true,
+  //   drop: ['debugger'],
+  //   legalComments: 'none',
+  //   mangleProps: /^_/,
+  //   keepNames: false,
+  // }),
   define: {
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
     'global': 'globalThis',
