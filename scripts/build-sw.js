@@ -31,7 +31,7 @@ const buildOptions = {
     drop: ['debugger'], // Keep console.log for debugging, drop debugger only
     legalComments: 'none',
     mangleProps: /^_/,
-    ignoreAnnotations: true, // Ignore pure annotations to enable more aggressive tree shaking
+    // KEEP ignoreAnnotations: false (default) - aggressive tree-shaking breaks libp2p
     keepNames: false, // Don't preserve function/class names
   }),
   define: {
