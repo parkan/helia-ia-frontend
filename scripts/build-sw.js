@@ -28,7 +28,7 @@ const buildOptions = {
   // Production optimizations
   ...(isProduction && {
     treeShaking: true,
-    drop: ['console', 'debugger'],
+    drop: ['debugger'], // Keep console.log for debugging, drop debugger only
     legalComments: 'none',
     mangleProps: /^_/,
     ignoreAnnotations: true, // Ignore pure annotations to enable more aggressive tree shaking

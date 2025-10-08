@@ -105,6 +105,9 @@ async function doInitialization(): Promise<{ helia: Helia; fs: UnixFS; verifiedF
     // Force bundler to keep this by adding a side-effect
     if (!dnsResolver) throw new Error('DNS resolver creation failed');
     
+    console.log('🔍 DNS resolver type:', typeof dnsResolver);
+    console.log('🔍 DNS resolver has query method:', typeof dnsResolver?.query === 'function');
+    
     const config = {
       // Use IndexedDB blockstore for persistent storage
       blockstore,
@@ -129,6 +132,9 @@ async function doInitialization(): Promise<{ helia: Helia; fs: UnixFS; verifiedF
       // No complex libp2p configuration needed with @helia/http
     };
     
+    console.log('🔍 Config keys:', Object.keys(config));
+    console.log('🔍 Config.dns defined:', config.dns !== undefined);
+    
     console.log('⚙️ Configuration created, calling createHeliaHTTP() with 8s timeout...');
     
     // Create a more robust timeout mechanism
@@ -142,6 +148,10 @@ async function doInitialization(): Promise<{ helia: Helia; fs: UnixFS; verifiedF
       return result;
     }).catch(error => {
       console.error('🔥 createHeliaHTTP() promise rejected:', error);
+      console.error('🔥 Error name:', error?.name);
+      console.error('🔥 Error message:', error?.message);
+      console.error('🔥 Error stack:', error?.stack);
+      console.error('🔥 Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
       isResolved = true;
       if (timeoutId) clearTimeout(timeoutId);
       throw error;

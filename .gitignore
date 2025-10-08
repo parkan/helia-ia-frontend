@@ -34,6 +34,12 @@ pids/
 *.seed
 *.pid.lock
 
+# IPFS/Helia cache and databases
+.helia-blocks/
+*.db
+*.db-shm
+*.db-wal
+
 # Coverage directory used by tools like istanbul
 coverage/
 *.lcov
