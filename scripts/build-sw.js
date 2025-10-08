@@ -25,14 +25,14 @@ const buildOptions = {
   platform: 'browser',
   sourcemap: true,  // Always generate sourcemaps for debugging
   minify: false,  // Disabled - minifier is breaking libp2p initialization
-  // NO production optimizations - debugging compatibility issues
-  // ...(isProduction && {
-  //   treeShaking: true,
-  //   drop: ['debugger'],
-  //   legalComments: 'none',
-  //   mangleProps: /^_/,
-  //   keepNames: false,
-  // }),
+  // Test optimizations one by one to find the culprit
+  ...(isProduction && {
+    treeShaking: true,  // Testing: is this the issue?
+    // drop: ['debugger'],
+    // legalComments: 'none',
+    // mangleProps: /^_/,
+    // keepNames: false,
+  }),
   define: {
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
     'global': 'globalThis',
