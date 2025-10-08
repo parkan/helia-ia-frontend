@@ -5,6 +5,8 @@ import { unixfs } from '@helia/unixfs';
 import { CID } from 'multiformats/cid';
 import { createVerifiedFetch } from '@helia/verified-fetch';
 import { IDBBlockstore } from 'blockstore-idb';
+import { trustlessGateway } from '@helia/block-brokers';
+import { httpGatewayRouting } from '@helia/routers';
 import { getHeliaConfig, HELIA_INIT_TIMEOUT, INIT_PROGRESS_INTERVAL } from '../utils/heliaConfig';
 import type { Helia } from '@helia/interface';
 import type { UnixFS } from '@helia/unixfs';
