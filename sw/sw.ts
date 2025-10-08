@@ -246,9 +246,9 @@ async function performShallowRetrieval(cidString: string, clientId: any = null):
       });
     }
     
-    // Fast root-only listing
+    // Fast root-only listing with extended metadata disabled for better performance
     let entryCount = 0;
-    for await (const entry of fs.ls(cid)) {
+    for await (const entry of fs.ls(cid, { extended: false })) {
       entryCount++;
       console.log(`📄 Found entry ${entryCount}: ${entry.name} (${entry.type}) - ${entry.cid.toString()}`);
       
@@ -333,7 +333,7 @@ async function processSubdirectoriesInBackground(subdirectories: SubdirectoryEnt
       const subdirCid = CID.parse(subdir.cid);
       const subdirFiles: FileEntry[] = [];
       
-      for await (const entry of fs.ls(subdirCid)) {
+      for await (const entry of fs.ls(subdirCid, { extended: false })) {
         const fullPath = `${subdir.path}/${entry.name}`;
         subdirFiles.push({
           name: fullPath,
