@@ -7,6 +7,7 @@ import { createVerifiedFetch } from '@helia/verified-fetch';
 import { IDBBlockstore } from 'blockstore-idb';
 import { trustlessGateway } from '@helia/block-brokers';
 import { httpGatewayRouting } from '@helia/routers';
+import { dns } from '@multiformats/dns';
 import type { Helia } from '@helia/interface';
 import type { UnixFS } from '@helia/unixfs';
 
@@ -102,6 +103,8 @@ async function doInitialization(): Promise<{ helia: Helia; fs: UnixFS; verifiedF
     const config = {
       // Use IndexedDB blockstore for persistent storage
       blockstore,
+      // DNS resolver for browser environment
+      dns: dns(),
       // Configure block brokers - trustlessGateway without parameters
       blockBrokers: [
         trustlessGateway()
