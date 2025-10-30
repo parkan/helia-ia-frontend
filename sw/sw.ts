@@ -6,7 +6,7 @@ import { CID } from 'multiformats/cid';
 import { createVerifiedFetch } from '@helia/verified-fetch';
 import { IDBBlockstore } from 'blockstore-idb';
 import { trustlessGateway } from '@helia/block-brokers';
-import { httpGatewayRouting } from '@helia/routers';
+import { httpGatewayRouting, delegatedHTTPRouting } from '@helia/routers';
 import { dns } from '@multiformats/dns';
 import type { Helia } from '@helia/interface';
 import type { UnixFS } from '@helia/unixfs';
