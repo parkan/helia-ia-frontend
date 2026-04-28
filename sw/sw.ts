@@ -122,7 +122,7 @@ async function doInitialization(): Promise<{ helia: Helia; fs: UnixFS; verifiedF
         delegatedHTTPRouting('https://delegated-ipfs.dev', { filterProtocols: ['transport-ipfs-gateway-http'] }),
         httpGatewayRouting({
           gateways: [
-            'https://ia.dcentnetworks.nl',
+            'https://filretrievals.dcentnetworks.nl',
             //https://trustless-gateway.link',
             //'https://blocks.ipfs.io',
             //'https://dweb.link'
